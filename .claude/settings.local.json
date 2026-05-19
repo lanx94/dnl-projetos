@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(head -50)",
+      "PowerShell(cd \"c:\\\\Users\\\\lucas\\\\Documents\\\\dnl5\\\\dnl-projetos\"; Start-Process powershell -ArgumentList \"-NoExit\", \"-Command\", \"cd 'c:\\\\Users\\\\lucas\\\\Documents\\\\dnl5\\\\dnl-projetos'; npm run dev\" -WindowStyle Normal)",
+      "PowerShell($resp = Invoke-RestMethod -Uri \"http://localhost:3001/api/auth/login\" -Method POST -ContentType \"application/json\" -Body '{\"email\":\"admin@dnlprojetos.com\",\"senha\":\"Admin@2025\"}'; $token = $resp.token; $headers = @{Authorization=\"Bearer $token\"}; $clientes = Invoke-RestMethod -Uri \"http://localhost:3001/api/clientes\" -Headers $headers; Write-Host \"Clients: $\\($clientes.Count\\)\"; $clientes | ForEach-Object { Write-Host \"$\\($_.id\\): $\\($_.nome\\) tipo=$\\($_.tipo_pessoa\\)\" })",
+      "PowerShell($resp = Invoke-RestMethod -Uri \"http://localhost:3001/api/auth/login\" -Method POST -ContentType \"application/json\" -Body '{\"email\":\"admin@dnlprojetos.com\",\"senha\":\"Admin@2025\"}'; $token = $resp.token; $headers = @{Authorization=\"Bearer $token\"; \"Content-Type\"=\"application/json\"}; $body = @{tipo_contrato='eletrica';tipos_contrato=@\\('eletrica'\\);cliente_id=3;titulo='Contrato Elétrico';objeto='elaboração do Projeto Elétrico';valor=1500;contratada_qualificacao='DNL PROJETOS TESTE, CNPJ 51.212.533/0001-78'} | ConvertTo-Json; $c = Invoke-RestMethod -Uri \"http://localhost:3001/api/contratos\" -Method POST -Headers $headers -Body $body; Write-Host \"Created: $\\($c.numero\\)\"; Write-Host \"cliente_tipo_pessoa=$\\($c.cliente_tipo_pessoa\\)\"; Write-Host \"cliente_estado_civil=$\\($c.cliente_estado_civil\\)\"; Write-Host \"contratada_qualificacao=$\\($c.contratada_qualificacao\\)\")",
+      "PowerShell($resp = Invoke-RestMethod -Uri \"http://localhost:3001/api/auth/login\" -Method POST -ContentType \"application/json\" -Body '{\"email\":\"admin@dnlprojetos.com\",\"senha\":\"Admin@2025\"}'; $token = $resp.token; $headers = @{Authorization=\"Bearer $token\"}; Invoke-RestMethod -Uri \"http://localhost:3001/api/contratos/1\" -Method DELETE -Headers $headers)",
+      "PowerShell(cd \"c:\\\\Users\\\\lucas\\\\Documents\\\\dnl5\\\\dnl-projetos\"; $result = npx tsc --noEmit --project tsconfig.json 2>&1; $result | Where-Object { $_ -notmatch \"electron|keycloak\" })",
+      "PowerShell(cd \"c:\\\\Users\\\\lucas\\\\Documents\\\\dnl5\\\\dnl-projetos\"; npx tsc --noEmit --project tsconfig.json 2>$null; echo \"exit: $LASTEXITCODE\")",
+      "PowerShell(cd \"C:\\\\Users\\\\lucas\\\\Documents\\\\dnl5\\\\dnl-projetos\"; npx tsc --noEmit 2>&1 | Where-Object { $_ -notmatch \"node_modules\" } | Select-Object -First 50)",
+      "PowerShell(cd \"C:\\\\Users\\\\lucas\\\\Documents\\\\dnl5\\\\dnl-projetos\"; npx tsc --noEmit 2>&1 | Where-Object { $_ -match \"Dashboards|FluxoCaixa|Balancete|financeiro|admin|backup|auth\\\\.ts|index\\\\.ts\" } | Select-Object -First 30)",
+      "PowerShell(Get-Process -Name \"node\" -ErrorAction SilentlyContinue)",
+      "PowerShell(Stop-Process -Force)",
+      "PowerShell(cd \"C:\\\\Users\\\\lucas\\\\Documents\\\\dnl5\\\\dnl-projetos\"; Start-Process -FilePath \"powershell\" -ArgumentList \"-Command\", \"cd 'C:\\\\Users\\\\lucas\\\\Documents\\\\dnl5\\\\dnl-projetos'; npm run dev:server\" -WindowStyle Normal; Start-Sleep -Seconds 5; try { $r = Invoke-WebRequest -Uri \"http://localhost:3001/health\" -UseBasicParsing -TimeoutSec 5; Write-Host \"Server up: $\\($r.Content\\)\" } catch { Write-Host \"Server not yet up: $_\" })"
+    ]
+  }
+}

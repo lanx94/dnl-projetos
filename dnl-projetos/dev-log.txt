@@ -1,0 +1,155 @@
+
+> dnl-projetos@0.7.0 dev
+> concurrently -k "npm run dev:server" "npm run dev:client"
+
+[0] 
+[0] > dnl-projetos@0.7.0 dev:server
+[0] > tsx watch server/index.ts
+[0] 
+[1] 
+[1] > dnl-projetos@0.7.0 dev:client
+[1] > vite
+[1] 
+[1] [33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+[1] 
+[1]   [32m[1mVITE[22m v5.4.11[39m  [2mready in [0m[1m2262[22m[2m[0m ms[22m
+[1] 
+[1]   [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5173[22m/[39m
+[1] [2m  [32m➜[39m  [1mNetwork[22m[2m: use [22m[1m--host[22m[2m to expose[22m
+[0] [DB] Caminho do banco: ./data/dnl-projetos.db
+[0] [SERVER] DNL Projetos API rodando em http://localhost:3001
+[0] [SERVER] Keycloak: http://localhost:8080/realms/dnl
+[1] [2m00:15:38[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/GestorProjetos.tsx, /src/styles/globals.css[22m
+[0] 00:19:46 [tsx] change in ./server\database\db.ts Restarting...
+[0] c[DB] Caminho do banco: ./data/dnl-projetos.db
+[0] [MIGRATION] projetos.cidade adicionada
+[0] [SERVER] DNL Projetos API rodando em http://localhost:3001
+[0] [SERVER] Keycloak: http://localhost:8080/realms/dnl
+[0] 00:19:51 [tsx] change in ./server\routes\projetos.ts Restarting...
+[0] c[DB] Caminho do banco: ./data/dnl-projetos.db
+[0] [SERVER] DNL Projetos API rodando em http://localhost:3001
+[0] [SERVER] Keycloak: http://localhost:8080/realms/dnl
+[0] 00:19:58 [tsx] change in ./server\routes\projetos.ts Restarting...
+[0] c[DB] Caminho do banco: ./data/dnl-projetos.db
+[0] [SERVER] DNL Projetos API rodando em http://localhost:3001
+[0] [SERVER] Keycloak: http://localhost:8080/realms/dnl
+[0] 00:20:02 [tsx] change in ./server\routes\admin.ts Restarting...
+[0] c[DB] Caminho do banco: ./data/dnl-projetos.db
+[0] [SERVER] DNL Projetos API rodando em http://localhost:3001
+[0] [SERVER] Keycloak: http://localhost:8080/realms/dnl
+[0] 00:20:12 [tsx] change in ./server\routes\admin.ts Restarting...
+[0] c[DB] Caminho do banco: ./data/dnl-projetos.db
+[0] [SERVER] DNL Projetos API rodando em http://localhost:3001
+[0] [SERVER] Keycloak: http://localhost:8080/realms/dnl
+[1] [2m00:20:23[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/contexts/AuthContext.tsx, /src/styles/globals.css, /src/pages/Ponto.tsx, /src/pages/AdminDashboard.tsx, /src/pages/Projetos.tsx, /src/pages/Orcamentos.tsx, /src/pages/CRM.tsx, /src/pages/Financeiro.tsx, /src/pages/RelatorioHoras.tsx, /src/pages/Clientes.tsx, /src/pages/RelatorioDiario.tsx, /src/pages/Feed.tsx, /src/pages/Cronometro.tsx, /src/pages/Reunioes.tsx, /src/pages/Dashboard.tsx, /src/pages/DRE.tsx, /src/pages/Funcionarios.tsx, /src/pages/Backup.tsx, /src/pages/GestorProjetos.tsx, /src/pages/Conhecimento.tsx, /src/pages/Contratos.tsx[22m
+[1] [2m00:20:23[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/contexts/AuthContext.tsx[22m Could not Fast Refresh ("useAuth" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[1] [2m00:20:23[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/contexts/AuthContext.tsx[22m
+[1] [2m00:20:27[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/contexts/AuthContext.tsx, /src/styles/globals.css, /src/pages/Ponto.tsx, /src/pages/AdminDashboard.tsx, /src/pages/Projetos.tsx, /src/pages/Orcamentos.tsx, /src/pages/CRM.tsx, /src/pages/Financeiro.tsx, /src/pages/RelatorioHoras.tsx, /src/pages/Clientes.tsx, /src/pages/RelatorioDiario.tsx, /src/pages/Feed.tsx, /src/pages/Cronometro.tsx, /src/pages/Reunioes.tsx, /src/pages/Dashboard.tsx, /src/pages/DRE.tsx, /src/pages/Funcionarios.tsx, /src/pages/Backup.tsx, /src/pages/GestorProjetos.tsx, /src/pages/Conhecimento.tsx, /src/pages/Contratos.tsx[22m
+[1] [2m00:20:27[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/contexts/AuthContext.tsx[22m Could not Fast Refresh ("useAuth" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[1] [2m00:20:27[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/contexts/AuthContext.tsx[22m
+[0] 00:28:52 [tsx] change in ./server\routes\financeiro.ts Restarting...
+[0] c[DB] Caminho do banco: ./data/dnl-projetos.db
+[0] [SERVER] DNL Projetos API rodando em http://localhost:3001
+[0] [SERVER] Keycloak: http://localhost:8080/realms/dnl
+[0] 00:29:11 [tsx] change in ./server\routes\financeiro.ts Restarting...
+[0] c[DB] Caminho do banco: ./data/dnl-projetos.db
+[0] [SERVER] DNL Projetos API rodando em http://localhost:3001
+[0] [SERVER] Keycloak: http://localhost:8080/realms/dnl
+[1] [2m00:29:18[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/contexts/AuthContext.tsx, /src/styles/globals.css, /src/pages/Ponto.tsx, /src/pages/AdminDashboard.tsx, /src/pages/Projetos.tsx, /src/pages/Orcamentos.tsx, /src/pages/CRM.tsx, /src/pages/Financeiro.tsx, /src/pages/RelatorioHoras.tsx, /src/pages/Clientes.tsx, /src/pages/RelatorioDiario.tsx, /src/pages/Feed.tsx, /src/pages/Cronometro.tsx, /src/pages/Reunioes.tsx, /src/pages/Dashboard.tsx, /src/pages/DRE.tsx, /src/pages/Funcionarios.tsx, /src/pages/Backup.tsx, /src/pages/GestorProjetos.tsx, /src/pages/Conhecimento.tsx, /src/pages/Contratos.tsx[22m
+[1] [2m00:29:19[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/contexts/AuthContext.tsx[22m Could not Fast Refresh ("useAuth" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[1] [2m00:29:19[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/contexts/AuthContext.tsx[22m
+[1] [2m00:29:25[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/contexts/AuthContext.tsx, /src/styles/globals.css, /src/pages/Ponto.tsx, /src/pages/AdminDashboard.tsx, /src/pages/Projetos.tsx, /src/pages/Orcamentos.tsx, /src/pages/CRM.tsx, /src/pages/Financeiro.tsx, /src/pages/RelatorioHoras.tsx, /src/pages/Clientes.tsx, /src/pages/RelatorioDiario.tsx, /src/pages/Feed.tsx, /src/pages/Cronometro.tsx, /src/pages/Reunioes.tsx, /src/pages/Dashboard.tsx, /src/pages/DRE.tsx, /src/pages/Funcionarios.tsx, /src/pages/Backup.tsx, /src/pages/GestorProjetos.tsx, /src/pages/Conhecimento.tsx, /src/pages/Contratos.tsx[22m
+[1] [2m00:29:25[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/contexts/AuthContext.tsx[22m Could not Fast Refresh ("useAuth" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[1] [2m00:29:25[22m [36m[1m[vite][22m[39m [32mpage reload [39m[2msrc/contexts/AuthContext.tsx[22m
+[1] [2m00:30:57[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/styles/globals.css[22m
+[1] [2m00:31:01[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/styles/globals.css[22m
+[1] [2m00:31:08[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/layout/Layout.tsx, /src/styles/globals.css[22m
+[1] [2m00:31:13[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/layout/Layout.tsx, /src/styles/globals.css[22m
+[1] [2m00:31:25[22m [36m[1m[vite][22m[39m [32m✨ new dependencies optimized: [33mrecharts[32m[39m
+[1] [2m00:31:25[22m [36m[1m[vite][22m[39m [32m✨ optimized dependencies changed. reloading[39m
+[1] [2m00:44:31[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/GestorProjetos.tsx, /src/styles/globals.css[22m
+[1] [2m00:44:36[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/GestorProjetos.tsx, /src/styles/globals.css[22m
+[1] [2m00:44:42[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/GestorProjetos.tsx, /src/styles/globals.css[22m
+[1] [2m01:04:14[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Balancete.tsx, /src/styles/globals.css[22m
+[1] [2m01:04:20[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Balancete.tsx, /src/styles/globals.css[22m
+[1] [2m01:04:25[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Balancete.tsx, /src/styles/globals.css[22m
+[1] [2m01:04:30[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Balancete.tsx, /src/styles/globals.css[22m
+[1] [2m01:04:34[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Balancete.tsx, /src/styles/globals.css[22m
+[0] 01:13:16 [tsx] change in ./server\routes\admin.ts Restarting...
+[0] c[DB] Caminho do banco: ./data/dnl-projetos.db
+[0] [SERVER] DNL Projetos API rodando em http://localhost:3001
+[0] [SERVER] Keycloak: http://localhost:8080/realms/dnl
+[0] 01:13:21 [tsx] change in ./server\routes\financeiro.ts Restarting...
+[0] c[DB] Caminho do banco: ./data/dnl-projetos.db
+[0] [SERVER] DNL Projetos API rodando em http://localhost:3001
+[0] [SERVER] Keycloak: http://localhost:8080/realms/dnl
+[1] [2m01:14:21[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/FluxoCaixa.tsx, /src/styles/globals.css[22m
+[1] [2m01:15:33[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Balancete.tsx, /src/styles/globals.css[22m
+[1] [2m01:16:34[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Dashboards.tsx, /src/styles/globals.css[22m
+[0] 01:17:19 [tsx] change in ./server\middleware\auth.ts Restarting...
+[0] c[DB] Caminho do banco: ./data/dnl-projetos.db
+[0] [SERVER] DNL Projetos API rodando em http://localhost:3001
+[0] [SERVER] Keycloak: http://localhost:8080/realms/dnl
+[0] 01:17:24 [tsx] change in ./server\routes\auth.ts Restarting...
+[0] c
+[1] [2m01:17:25[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/pontos/hoje[39m
+[1] AggregateError [ECONNREFUSED]: 
+[1]     at internalConnectMultiple (node:net:1122:18)
+[1]     at afterConnectMultiple (node:net:1689:7)
+[1] [2m01:17:25[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/cronometro/ativo[39m
+[1] AggregateError [ECONNREFUSED]: 
+[1]     at internalConnectMultiple (node:net:1122:18)
+[1]     at afterConnectMultiple (node:net:1689:7)
+[1] [2m01:17:25[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/relatorios/diario/hoje[39m
+[1] AggregateError [ECONNREFUSED]: 
+[1]     at internalConnectMultiple (node:net:1122:18)
+[1]     at afterConnectMultiple (node:net:1689:7)
+[1] [2m01:17:25[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/pontos/hoje[39m
+[1] AggregateError [ECONNREFUSED]: 
+[1]     at internalConnectMultiple (node:net:1122:18)
+[1]     at afterConnectMultiple (node:net:1689:7)
+[1] [2m01:17:25[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/cronometro/ativo[39m
+[1] AggregateError [ECONNREFUSED]: 
+[1]     at internalConnectMultiple (node:net:1122:18)
+[1]     at afterConnectMultiple (node:net:1689:7)
+[1] [2m01:17:25[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/relatorios/diario/hoje[39m
+[1] AggregateError [ECONNREFUSED]: 
+[1]     at internalConnectMultiple (node:net:1122:18)
+[1]     at afterConnectMultiple (node:net:1689:7)
+[1] [2m01:17:25[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/pontos/hoje[39m
+[1] AggregateError [ECONNREFUSED]: 
+[1]     at internalConnectMultiple (node:net:1122:18)
+[1]     at afterConnectMultiple (node:net:1689:7)
+[1] [2m01:17:25[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/cronometro/ativo[39m
+[1] AggregateError [ECONNREFUSED]: 
+[1]     at internalConnectMultiple (node:net:1122:18)
+[1]     at afterConnectMultiple (node:net:1689:7)
+[1] [2m01:17:25[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/relatorios/diario/hoje[39m
+[1] AggregateError [ECONNREFUSED]: 
+[1]     at internalConnectMultiple (node:net:1122:18)
+[1]     at afterConnectMultiple (node:net:1689:7)
+[0] [DB] Caminho do banco: ./data/dnl-projetos.db
+[0] [SERVER] DNL Projetos API rodando em http://localhost:3001
+[0] [SERVER] Keycloak: http://localhost:8080/realms/dnl
+[0] 01:17:34 [tsx] change in ./server\routes\auth.ts Restarting...
+[0] c[DB] Caminho do banco: ./data/dnl-projetos.db
+[0] [SERVER] DNL Projetos API rodando em http://localhost:3001
+[0] [SERVER] Keycloak: http://localhost:8080/realms/dnl
+[0] 01:17:39 [tsx] change in ./server\routes\auth.ts Restarting...
+[0] c[DB] Caminho do banco: ./data/dnl-projetos.db
+[0] [SERVER] DNL Projetos API rodando em http://localhost:3001
+[0] [SERVER] Keycloak: http://localhost:8080/realms/dnl
+[0] 01:17:47 [tsx] change in ./server\routes\auth.ts Restarting...
+[0] c[DB] Caminho do banco: ./data/dnl-projetos.db
+[0] [SERVER] DNL Projetos API rodando em http://localhost:3001
+[0] [SERVER] Keycloak: http://localhost:8080/realms/dnl
+[0] 01:17:54 [tsx] change in ./server\routes\backup.ts Restarting...
+[0] c[DB] Caminho do banco: ./data/dnl-projetos.db
+[0] [SERVER] DNL Projetos API rodando em http://localhost:3001
+[0] [SERVER] Keycloak: http://localhost:8080/realms/dnl
+[0] 01:18:02 [tsx] change in ./server\index.ts Restarting...
+[0] c[DB] Caminho do banco: ./data/dnl-projetos.db
+[0] [SERVER] DNL Projetos API rodando em http://localhost:3001
+[0] [SERVER] Keycloak: http://localhost:8080/realms/dnl
+[1] [2m07:21:30[22m [36m[1m[vite][22m[39m [32m.env changed, restarting server...[39m
+[1] [2m07:21:31[22m [36m[1m[vite][22m[39m server restarted.
