@@ -27,6 +27,9 @@ import Balancete from './pages/Balancete'
 import Metas from './pages/Metas'
 import RevisoesProjeto from './pages/RevisoesProjeto'
 import CalendarioPostagem from './pages/CalendarioPostagem'
+import Feriados from './pages/Feriados'
+import Configuracoes from './pages/Configuracoes'
+import Conversao from './pages/Conversao'
 import Layout from './components/layout/Layout'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -92,6 +95,9 @@ export default function App() {
                 <Route path="/revisoes-projeto" element={<AdminRoute><RevisoesProjeto /></AdminRoute>} />
                 <Route path="/calendario-postagem" element={<AdminRoute><CalendarioPostagem /></AdminRoute>} />
                 <Route path="/backup" element={<AdminOnlyRoute><Backup /></AdminOnlyRoute>} />
+                <Route path="/configuracoes" element={<AdminOnlyRoute><Configuracoes /></AdminOnlyRoute>} />
+                <Route path="/feriados" element={<Feriados />} />
+                <Route path="/conversao" element={<Conversao />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </Layout>

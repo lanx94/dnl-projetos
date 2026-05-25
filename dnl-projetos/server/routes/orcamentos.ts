@@ -58,7 +58,7 @@ router.post('/', requireRole('admin', 'rh'), (req, res) => {
     const input: OrcamentoCreateInput = req.body
     const db = getDatabase()
     const numero = gerarNumero(db)
-    const r = db.prepare(`INSERT INTO orcamentos (numero, cliente_id, projeto_id, titulo, descricao, status, data_emissao, validade_dias, desconto_percentual, forma_pagamento, prazo_execucao, observacoes, criado_por_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(numero, input.cliente_id, input.projeto_id || null, input.titulo, input.descricao || null, input.status || 'rascunho', input.data_emissao || new Date().toISOString().split('T')[0], input.validade_dias ?? 30, input.desconto_percentual ?? 0, input.forma_pagamento || null, input.prazo_execucao || null, input.observacoes || null, u.id)
+    const r = db.prepare(`INSERT INTO orcamentos (numero, cliente_id, projeto_id, titulo, descricao, status, data_emissao, validade_dias, desconto_percentual, forma_pagamento, prazo_execucao, observacoes, projetos_necessarios, incluso, criado_por_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(numero, input.cliente_id, input.projeto_id || null, input.titulo, input.descricao || null, input.status || 'rascunho', input.data_emissao || new Date().toISOString().split('T')[0], input.validade_dias ?? 15, input.desconto_percentual ?? 0, input.forma_pagamento || null, input.prazo_execucao || null, input.observacoes || null, input.projetos_necessarios || null, input.incluso || null, u.id)
     const id = r.lastInsertRowid as number
     if (input.itens?.length) {
       const stmt = db.prepare('INSERT INTO itens_orcamento (orcamento_id, ordem, descricao, quantidade, unidade, valor_unitario, valor_total) VALUES (?, ?, ?, ?, ?, ?, ?)')
@@ -79,7 +79,7 @@ router.put('/:id', requireRole('admin', 'rh'), (req, res) => {
     const id = Number(req.params.id)
     const input: Partial<OrcamentoCreateInput> = req.body
     const db = getDatabase()
-    const permitidos = new Set(['cliente_id', 'projeto_id', 'titulo', 'descricao', 'status', 'data_emissao', 'validade_dias', 'desconto_percentual', 'forma_pagamento', 'prazo_execucao', 'observacoes'])
+    const permitidos = new Set(['cliente_id', 'projeto_id', 'titulo', 'descricao', 'status', 'data_emissao', 'validade_dias', 'desconto_percentual', 'forma_pagamento', 'prazo_execucao', 'observacoes', 'projetos_necessarios', 'incluso'])
     const campos: string[] = []
     const valores: any[] = []
     for (const [k, v] of Object.entries(input)) {
@@ -124,7 +124,7 @@ router.post('/:id/duplicar', requireRole('admin', 'rh'), (req, res) => {
     if (!original) { res.status(404).json({ error: 'Orçamento não encontrado' }); return }
     const db = getDatabase()
     const numero = gerarNumero(db)
-    const r = db.prepare(`INSERT INTO orcamentos (numero, cliente_id, projeto_id, titulo, descricao, status, data_emissao, validade_dias, desconto_percentual, forma_pagamento, prazo_execucao, observacoes, criado_por_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(numero, original.cliente_id, original.projeto_id || null, `${original.titulo} (cópia)`, original.descricao || null, 'rascunho', new Date().toISOString().split('T')[0], original.validade_dias, original.desconto_percentual, original.forma_pagamento || null, original.prazo_execucao || null, original.observacoes || null, u.id)
+    const r = db.prepare(`INSERT INTO orcamentos (numero, cliente_id, projeto_id, titulo, descricao, status, data_emissao, validade_dias, desconto_percentual, forma_pagamento, prazo_execucao, observacoes, projetos_necessarios, incluso, criado_por_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(numero, original.cliente_id, original.projeto_id || null, `${original.titulo} (cópia)`, original.descricao || null, 'rascunho', new Date().toISOString().split('T')[0], original.validade_dias, original.desconto_percentual, original.forma_pagamento || null, original.prazo_execucao || null, original.observacoes || null, original.projetos_necessarios || null, original.incluso || null, u.id)
     const newId = r.lastInsertRowid as number
     if (original.itens?.length) {
       const stmt = db.prepare('INSERT INTO itens_orcamento (orcamento_id, ordem, descricao, quantidade, unidade, valor_unitario, valor_total) VALUES (?, ?, ?, ?, ?, ?, ?)')

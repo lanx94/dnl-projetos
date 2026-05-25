@@ -26,6 +26,7 @@ import backupRouter from './routes/backup'
 import exportsRouter from './routes/exports'
 import clientesRouter from './routes/clientes'
 import usuariosRouter from './routes/usuarios'
+import configuracoesRouter from './routes/configuracoes'
 
 const app = express()
 const PORT = Number(process.env.PORT) || 3001
@@ -79,6 +80,7 @@ app.use('/api/backup', backupRouter)
 app.use('/api/exports', exportsRouter)
 app.use('/api/clientes', clientesRouter)
 app.use('/api/usuarios', usuariosRouter)
+app.use('/api/configuracoes', configuracoesRouter)
 
 // ── Serve frontend em produção ────────────────────────────────────────────────
 const distPath = path.join(process.cwd(), 'dist')

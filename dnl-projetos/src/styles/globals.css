@@ -59,6 +59,10 @@
 }
 
 @media print {
+  @page {
+    margin: 1.2cm 1.5cm;
+  }
+
   /* Esconde tudo */
   body * {
     visibility: hidden;

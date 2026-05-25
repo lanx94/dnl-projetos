@@ -366,6 +366,8 @@ export interface Orcamento {
   forma_pagamento?: string
   prazo_execucao?: string
   observacoes?: string
+  projetos_necessarios?: string
+  incluso?: string
   itens: ItemOrcamento[]
   subtotal: number
   desconto_valor: number
@@ -388,6 +390,8 @@ export interface OrcamentoCreateInput {
   forma_pagamento?: string
   prazo_execucao?: string
   observacoes?: string
+  projetos_necessarios?: string
+  incluso?: string
   itens: Omit<ItemOrcamento, 'id' | 'orcamento_id' | 'valor_total'>[]
 }
 
@@ -592,6 +596,8 @@ export interface Lead {
   responsavel_nome?: string
   cliente_id?: number
   cliente_nome?: string
+  orcamento_id?: number
+  orcamento_numero?: string
   contatado_em?: string
   data_alvo?: string
   observacoes?: string
@@ -606,6 +612,7 @@ export interface LeadCreateInput {
   valor_estimado?: number
   responsavel_id?: number
   cliente_id?: number
+  orcamento_id?: number
   contatado_em?: string
   data_alvo?: string
   observacoes?: string

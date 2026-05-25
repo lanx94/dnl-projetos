@@ -1,5 +1,5 @@
 import { useEffect, useState, FormEvent } from 'react'
-import { Plus, X, Edit2, Trash2, Eye, ArrowLeft, Printer, RotateCcw, Sparkles } from 'lucide-react'
+import { Plus, X, Edit2, Trash2, Eye, ArrowLeft, Printer, RotateCcw, Sparkles, FileText } from 'lucide-react'
 import { api } from '../lib/api'
 import PageHeader from '../components/ui/PageHeader'
 import type {
@@ -11,11 +11,18 @@ import {
   calcularNumeros, substituirVars, agruparPorSecao
 } from '../utils/contratos'
 import { maskCpfCnpj } from '../utils/masks'
-import logoDNL from '../assets/logo-dnl.jpg'
+import logoDNL from '../assets/logo-dnl-new.svg'
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
-const CONTRATADA_DEFAULT = `DNL PROJETOS, pessoa jurídica de direito privado, inscrita no CNPJ sob o nº 51.212.533/0001-78, com sede na Rua Das Margaridas dos Campos, nº 45, Jardim Camargo Novo, Itaim Paulista – SP, CEP 08141-710, representada neste ato por seu sócio LUCAS CARDOSO DA SILVA, engenheiro civil, brasileiro, solteiro, inscrito no CREA-SP nº 5070747868`
+function buildContratadaDefault(cfg: Record<string, string>): string {
+  const partes: string[] = []
+  if (cfg.empresa_nome) partes.push(cfg.empresa_nome.toUpperCase())
+  if (cfg.empresa_cnpj) partes.push(`pessoa jurídica de direito privado, inscrita no CNPJ sob o nº ${cfg.empresa_cnpj}`)
+  if (cfg.empresa_endereco) partes.push(`com sede na ${cfg.empresa_endereco}`)
+  if (cfg.empresa_responsavel) partes.push(`representada neste ato por ${cfg.empresa_responsavel}`)
+  return partes.join(', ')
+}
 
 const STATUS_LABEL: Record<StatusContrato, string> = {
   rascunho: 'Rascunho',
@@ -283,6 +290,9 @@ function ContratoView({
   onEditar: () => void
   onDeletar: () => void
 }) {
+  const [config, setConfig] = useState<Record<string, string>>({})
+  useEffect(() => { api.configuracoes.obter().then(setConfig).catch(() => {}) }, [])
+
   const tipos = contrato.tipos_contrato?.length
     ? contrato.tipos_contrato
     : [contrato.tipo_contrato]
@@ -314,6 +324,138 @@ function ContratoView({
 
   const grupos = agruparPorSecao(contrato.clausulas.filter(c => c.incluida))
 
+  function gerarWord() {
+    const numeros = calcularNumeros(contrato.clausulas)
+
+    const contratadaText = contrato.contratada_qualificacao || buildContratadaDefault(config)
+
+    let contratanteText = ''
+    if (contrato.cliente_tipo_pessoa === 'juridica') {
+      contratanteText = contrato.cliente_nome || '—'
+      if (contrato.cliente_cnpj) contratanteText += `, pessoa jurídica inscrita no CNPJ sob o nº ${maskCpfCnpj(contrato.cliente_cnpj)}`
+      if (contrato.cliente_endereco) contratanteText += `, com sede em ${contrato.cliente_endereco}`
+      if (contrato.cliente_representante) {
+        contratanteText += `, neste ato representada por ${contrato.cliente_representante}`
+        if (contrato.cliente_estado_civil) contratanteText += `, ${contrato.cliente_estado_civil}`
+        if (contrato.cliente_profissao) contratanteText += `, ${contrato.cliente_profissao}`
+        if (contrato.cliente_nacionalidade) contratanteText += `, ${contrato.cliente_nacionalidade}`
+        if (contrato.cliente_rg) contratanteText += `, portador(a) do RG nº ${contrato.cliente_rg}`
+        if (contrato.cliente_cpf) contratanteText += `, inscrito(a) no CPF sob o nº ${maskCpfCnpj(contrato.cliente_cpf)}`
+      }
+    } else {
+      contratanteText = contrato.cliente_nome || '—'
+      if (contrato.cliente_nacionalidade) contratanteText += `, ${contrato.cliente_nacionalidade}`
+      if (contrato.cliente_estado_civil) contratanteText += `, ${contrato.cliente_estado_civil}`
+      if (contrato.cliente_profissao) contratanteText += `, ${contrato.cliente_profissao}`
+      if (contrato.cliente_rg) contratanteText += `, portador(a) do RG nº ${contrato.cliente_rg}`
+      if (contrato.cliente_cpf) contratanteText += `, inscrito(a) no CPF sob o nº ${maskCpfCnpj(contrato.cliente_cpf)}`
+      if (contrato.cliente_endereco) contratanteText += `, residente e domiciliado(a) à ${contrato.cliente_endereco}`
+    }
+
+    let clausulasHtml = ''
+    for (const g of grupos) {
+      clausulasHtml += `<div style="margin-top:32px;margin-bottom:16px;text-align:center;"><span style="font-family:Arial,sans-serif;font-size:9pt;font-weight:bold;letter-spacing:3px;text-transform:uppercase;color:#888;">— ${g.secao} —</span></div>`
+      for (const c of g.itens) {
+        const n = numeros[c.id]
+        const texto = substituirVars(c.texto, ctx)
+        const paragrafos = texto.split('\n').filter(l => l.trim())
+        clausulasHtml += `<p style="font-family:Georgia,serif;font-size:13pt;line-height:1.85;text-align:justify;margin-bottom:12px;color:#1a1a1a;"><strong>Cláusula ${n}ª.</strong> ${paragrafos[0] || ''}</p>`
+        for (const p of paragrafos.slice(1)) {
+          clausulasHtml += `<p style="font-family:Georgia,serif;font-size:13pt;line-height:1.85;text-align:justify;margin-bottom:8px;color:#1a1a1a;padding-left:24px;">${p}</p>`
+        }
+      }
+    }
+
+    const rodapeInfo = [
+      config.empresa_nome || 'DNL Projetos',
+      config.empresa_cnpj ? `CNPJ ${config.empresa_cnpj}` : '',
+      config.empresa_email,
+      config.empresa_telefone,
+    ].filter(Boolean).join(' · ')
+
+    const html = `﻿<!DOCTYPE html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+<head><meta charset="utf-8"><title>${contrato.numero}</title>
+<style>@page{margin:3cm 3.5cm;}body{font-family:Georgia,"Times New Roman",serif;font-size:13pt;color:#1a1a1a;}</style>
+</head><body>
+<table style="width:100%;border-collapse:collapse;border-bottom:2.5pt solid #1a1a1a;padding-bottom:16px;margin-bottom:24px;">
+  <tr>
+    <td style="vertical-align:middle;padding-bottom:12px;">
+      <span style="font-family:Arial,sans-serif;font-size:14pt;font-weight:bold;letter-spacing:3px;text-transform:uppercase;">${config.empresa_nome || 'DNL Projetos'}</span>
+      ${config.empresa_slogan ? `<br><span style="font-family:Arial,sans-serif;font-size:9pt;color:#888;">${config.empresa_slogan}</span>` : ''}
+      ${config.empresa_cnpj ? `<br><span style="font-family:Arial,sans-serif;font-size:9pt;color:#888;">CNPJ ${config.empresa_cnpj}</span>` : ''}
+      ${(config.empresa_telefone || config.empresa_email) ? `<br><span style="font-family:Arial,sans-serif;font-size:9pt;color:#999;">${[config.empresa_telefone, config.empresa_email].filter(Boolean).join(' · ')}</span>` : ''}
+    </td>
+    <td style="text-align:right;vertical-align:top;padding-bottom:12px;">
+      <span style="font-family:Arial,sans-serif;font-size:8pt;text-transform:uppercase;letter-spacing:2px;color:#888;">Contrato nº</span><br>
+      <span style="font-family:monospace;font-size:20pt;font-weight:bold;">${contrato.numero.replace('CONT-', '')}</span>
+      ${contrato.data_assinatura ? `<br><span style="font-family:Arial,sans-serif;font-size:10pt;color:#666;">${fmtDataBR(contrato.data_assinatura)}</span>` : ''}
+    </td>
+  </tr>
+</table>
+<div style="text-align:center;margin-bottom:28px;">
+  <h1 style="font-family:Arial,sans-serif;font-size:13pt;font-weight:bold;letter-spacing:4px;text-transform:uppercase;color:#1a1a1a;margin:0;">Contrato de Prestação de Serviços</h1>
+  <p style="font-family:Georgia,serif;font-size:11pt;color:#999;margin:6px 0 0;font-style:italic;">${tiposLabel(tipos)}</p>
+</div>
+<div style="margin-bottom:28px;font-size:13pt;line-height:1.8;text-align:justify;color:#1a1a1a;">
+  <p style="margin-bottom:14px;">Pelo presente instrumento particular, as partes a seguir identificadas:</p>
+  <p style="margin-bottom:14px;"><strong>CONTRATADA:</strong> ${contratadaText}, doravante denominada simplesmente <strong>CONTRATADA</strong>.</p>
+  <p style="margin-bottom:14px;"><strong>CONTRATANTE:</strong> ${contratanteText}, doravante denominado(a) simplesmente <strong>CONTRATANTE</strong>.</p>
+  <p style="font-style:italic;color:#555;">Celebram, entre si, o presente Contrato de Prestação de Serviços, que se regerá pelas cláusulas e condições a seguir estipuladas, bem como pelas disposições do Código Civil Brasileiro (Lei nº 10.406/2002), no que couber.</p>
+</div>
+${clausulasHtml}
+<p style="text-align:center;font-style:italic;color:#555;margin-top:40px;margin-bottom:28px;font-size:13pt;">${contrato.cidade}, ${contrato.data_assinatura ? fmtDataBR(contrato.data_assinatura) : '___ de ___________________ de ______'}.</p>
+<table style="width:100%;border-collapse:collapse;margin-top:8px;">
+  <tr>
+    <td style="width:50%;text-align:center;padding:0 40px;">
+      <div style="height:80px;"></div>
+      <div style="border-top:2pt solid #1a1a1a;padding-top:10px;">
+        <p style="font-family:Arial,sans-serif;font-size:10pt;font-weight:bold;text-transform:uppercase;letter-spacing:2px;margin:0;">CONTRATANTE</p>
+        <p style="font-family:Arial,sans-serif;font-size:9pt;color:#666;margin:4px 0 0;">${contrato.cliente_nome}</p>
+      </div>
+    </td>
+    <td style="width:50%;text-align:center;padding:0 40px;">
+      <div style="height:80px;"></div>
+      <div style="border-top:2pt solid #1a1a1a;padding-top:10px;">
+        <p style="font-family:Arial,sans-serif;font-size:10pt;font-weight:bold;text-transform:uppercase;letter-spacing:2px;margin:0;">CONTRATADA</p>
+        <p style="font-family:Arial,sans-serif;font-size:9pt;color:#666;margin:4px 0 0;">${config.empresa_responsavel || config.empresa_nome || 'DNL Projetos'}</p>
+      </div>
+    </td>
+  </tr>
+</table>
+<table style="width:100%;border-collapse:collapse;margin-top:48px;">
+  <tr>
+    <td style="width:50%;text-align:center;padding:0 40px;">
+      <div style="height:60px;"></div>
+      <div style="border-top:1pt solid #888;padding-top:8px;">
+        <p style="font-family:Arial,sans-serif;font-size:9pt;text-transform:uppercase;letter-spacing:2px;color:#666;margin:0;">Testemunha 1</p>
+        <p style="font-family:Arial,sans-serif;font-size:9pt;color:#aaa;margin:4px 0 0;">CPF: ___.___.___-__</p>
+      </div>
+    </td>
+    <td style="width:50%;text-align:center;padding:0 40px;">
+      <div style="height:60px;"></div>
+      <div style="border-top:1pt solid #888;padding-top:8px;">
+        <p style="font-family:Arial,sans-serif;font-size:9pt;text-transform:uppercase;letter-spacing:2px;color:#666;margin:0;">Testemunha 2</p>
+        <p style="font-family:Arial,sans-serif;font-size:9pt;color:#aaa;margin:4px 0 0;">CPF: ___.___.___-__</p>
+      </div>
+    </td>
+  </tr>
+</table>
+${contrato.observacoes ? `<div style="margin-top:32px;padding-top:16px;border-top:1pt solid #ddd;"><p style="font-family:Arial,sans-serif;font-size:9pt;font-weight:bold;text-transform:uppercase;letter-spacing:2px;color:#888;margin-bottom:6px;">Observações</p><p style="font-size:11pt;color:#555;white-space:pre-line;line-height:1.6;">${contrato.observacoes}</p></div>` : ''}
+<div style="margin-top:28px;padding-top:8px;border-top:0.5pt solid #ddd;text-align:center;">
+  <p style="font-family:Arial,sans-serif;font-size:7pt;text-transform:uppercase;letter-spacing:2px;color:#ccc;margin:0;">${rodapeInfo}</p>
+</div>
+</body></html>`
+
+    const blob = new Blob([html], { type: 'application/vnd.ms-word;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${contrato.numero}.doc`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <div className="fade-in">
       {/* Barra de ações — oculta na impressão */}
@@ -331,6 +473,9 @@ function ContratoView({
           <button onClick={onEditar} className="btn-secondary">
             <Edit2 size={14} /> Editar
           </button>
+          <button onClick={gerarWord} className="btn-secondary">
+            <FileText size={14} /> Gerar Word
+          </button>
           <button onClick={() => window.print()} className="btn-primary">
             <Printer size={14} /> Imprimir / PDF
           </button>
@@ -345,14 +490,22 @@ function ContratoView({
         {/* CABEÇALHO */}
         <div className="flex items-start justify-between gap-6 pb-5 mb-7 border-b-2 border-ink-900">
           <div className="flex items-center gap-4">
-            <img src={logoDNL} alt="DNL Projetos" style={{ width: 70, height: 'auto', flexShrink: 0 }} />
+            <img src={logoDNL} alt="DNL Projetos" style={{ width: 120, height: 'auto', flexShrink: 0 }} />
             <div>
               <p style={{ fontFamily: 'sans-serif' }} className="font-bold text-[13px] uppercase tracking-[0.15em] text-ink-900 leading-tight">
-                DNL Projetos
+                {config.empresa_nome || 'DNL Projetos'}
               </p>
-              <p style={{ fontFamily: 'sans-serif' }} className="text-[10px] text-ink-500 mt-0.5">Engenharia Civil & Arquitetura</p>
-              <p style={{ fontFamily: 'sans-serif' }} className="text-[10px] text-ink-500 mt-0.5">CNPJ 51.212.533/0001-78</p>
-              <p style={{ fontFamily: 'sans-serif' }} className="text-[10px] text-ink-400 mt-0.5">(11) 93210-5096 · projetosdnl@gmail.com</p>
+              {config.empresa_slogan && (
+                <p style={{ fontFamily: 'sans-serif' }} className="text-[10px] text-ink-500 mt-0.5">{config.empresa_slogan}</p>
+              )}
+              {config.empresa_cnpj && (
+                <p style={{ fontFamily: 'sans-serif' }} className="text-[10px] text-ink-500 mt-0.5">CNPJ {config.empresa_cnpj}</p>
+              )}
+              {(config.empresa_telefone || config.empresa_email) && (
+                <p style={{ fontFamily: 'sans-serif' }} className="text-[10px] text-ink-400 mt-0.5">
+                  {[config.empresa_telefone, config.empresa_email].filter(Boolean).join(' · ')}
+                </p>
+              )}
             </div>
           </div>
           <div className="text-right shrink-0">
@@ -385,7 +538,7 @@ function ContratoView({
 
           <p className="mb-5">
             <strong className="text-ink-900">CONTRATADA:</strong>{' '}
-            {contrato.contratada_qualificacao || CONTRATADA_DEFAULT},
+            {contrato.contratada_qualificacao || buildContratadaDefault(config)},
             doravante denominada simplesmente <strong>CONTRATADA</strong>.
           </p>
 
@@ -479,9 +632,10 @@ function ContratoView({
         <div className="grid grid-cols-2 gap-16 mt-2">
           {[
             { rotulo: 'CONTRATANTE', nome: contrato.cliente_nome },
-            { rotulo: 'CONTRATADA', nome: 'DNL Projetos — Lucas Cardoso da Silva' },
+            { rotulo: 'CONTRATADA', nome: config.empresa_responsavel || config.empresa_nome || 'DNL Projetos' },
           ].map(s => (
             <div key={s.rotulo} className="text-center">
+              <div className="h-28" />
               <div className="border-t-2 border-ink-800 pt-3">
                 <p style={{ fontFamily: 'sans-serif' }} className="text-[11px] font-bold uppercase tracking-wider text-ink-900">{s.rotulo}</p>
                 <p style={{ fontFamily: 'sans-serif' }} className="text-[10px] text-ink-500 mt-0.5">{s.nome}</p>
@@ -490,9 +644,10 @@ function ContratoView({
           ))}
         </div>
 
-        <div className="grid grid-cols-2 gap-16 mt-10">
+        <div className="grid grid-cols-2 gap-16 mt-14">
           {['TESTEMUNHA 1', 'TESTEMUNHA 2'].map(s => (
             <div key={s} className="text-center">
+              <div className="h-20" />
               <div className="border-t border-ink-400 pt-3">
                 <p style={{ fontFamily: 'sans-serif' }} className="text-[10px] uppercase tracking-wider text-ink-500">{s}</p>
                 <p style={{ fontFamily: 'sans-serif' }} className="text-[10px] text-ink-400 mt-1">CPF: ___.___.___-__</p>
@@ -516,7 +671,7 @@ function ContratoView({
         {/* RODAPÉ */}
         <div className="mt-8 pt-3 border-t border-ink-300/25 text-center">
           <p style={{ fontFamily: 'sans-serif' }} className="text-[8px] uppercase tracking-widest text-ink-300">
-            DNL Projetos · CNPJ 51.212.533/0001-78 · projetosdnl@gmail.com · (11) 93210-5096
+            {[config.empresa_nome || 'DNL Projetos', config.empresa_cnpj ? `CNPJ ${config.empresa_cnpj}` : '', config.empresa_email, config.empresa_telefone].filter(Boolean).join(' · ')}
           </p>
         </div>
       </div>
@@ -562,10 +717,11 @@ function ModalContrato({
   const [parcelas, setParcelas] = useState<ParcelaContrato[]>(contrato?.parcelas ?? [])
   const [clausulas, setClausulas] = useState<ClausulaContrato[]>(contrato?.clausulas ?? [])
   const [contratadaQualificacao, setContratadaQualificacao] = useState(
-    contrato?.contratada_qualificacao ?? CONTRATADA_DEFAULT
+    contrato?.contratada_qualificacao ?? ''
   )
 
   // ── Estado de UI ──────────────────────────────────────────────────────────
+  const [config, setConfig] = useState<Record<string, string>>({})
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [projetos, setProjetos] = useState<Projeto[]>([])
   const [aba, setAba] = useState<'dados' | 'contratada' | 'pagamento' | 'clausulas' | 'preview'>('dados')
@@ -574,10 +730,17 @@ function ModalContrato({
 
   // ── Efeitos ───────────────────────────────────────────────────────────────
 
-  // Carrega clientes e projetos na abertura
+  // Carrega clientes, projetos e config na abertura
   useEffect(() => {
-    Promise.all([api.clientes.listar(), api.projetos.listar()])
-      .then(([cs, ps]) => { setClientes(cs); setProjetos(ps) })
+    Promise.all([api.clientes.listar(), api.projetos.listar(), api.configuracoes.obter()])
+      .then(([cs, ps, cfg]) => {
+        setClientes(cs)
+        setProjetos(ps)
+        setConfig(cfg)
+        if (!ehEdicao && !contrato?.contratada_qualificacao) {
+          setContratadaQualificacao(buildContratadaDefault(cfg))
+        }
+      })
   }, [])
 
   // Quando tipos mudam (apenas novo contrato): carrega e mescla cláusulas
@@ -1026,10 +1189,10 @@ function ModalContrato({
               </div>
               <button
                 type="button"
-                onClick={() => setContratadaQualificacao(CONTRATADA_DEFAULT)}
+                onClick={() => setContratadaQualificacao(buildContratadaDefault(config))}
                 className="text-xs text-terra-500 hover:text-terra-700 flex items-center gap-1"
               >
-                <RotateCcw size={11} /> Restaurar padrão DNL
+                <RotateCcw size={11} /> Restaurar padrão
               </button>
             </div>
           )}
@@ -1162,8 +1325,8 @@ function ModalContrato({
                   <div className="flex items-center gap-3">
                     <img src={logoDNL} alt="DNL" style={{ width: 52, height: 'auto' }} />
                     <div>
-                      <p style={{ fontFamily: 'sans-serif' }} className="font-bold text-[12px] uppercase tracking-widest text-ink-900">DNL Projetos</p>
-                      <p style={{ fontFamily: 'sans-serif' }} className="text-[9px] text-ink-500">CNPJ 51.212.533/0001-78</p>
+                      <p style={{ fontFamily: 'sans-serif' }} className="font-bold text-[12px] uppercase tracking-widest text-ink-900">{config.empresa_nome || 'DNL Projetos'}</p>
+                      {config.empresa_cnpj && <p style={{ fontFamily: 'sans-serif' }} className="text-[9px] text-ink-500">CNPJ {config.empresa_cnpj}</p>}
                     </div>
                   </div>
                   <span style={{ fontFamily: 'sans-serif' }} className="text-[9px] uppercase tracking-widest text-ink-400 italic">Prévia</span>
@@ -1177,7 +1340,7 @@ function ModalContrato({
                 </div>
 
                 <p className="text-[12px] mb-3 text-justify leading-relaxed text-ink-800">
-                  <strong>CONTRATADA:</strong> DNL PROJETOS, CNPJ 51.212.533/0001-78, representada por Lucas Cardoso da Silva, Eng. Civil CREA-SP 5070747868.
+                  <strong>CONTRATADA:</strong> {contratadaQualificacao || buildContratadaDefault(config)}.
                 </p>
                 <p className="text-[12px] mb-6 text-justify leading-relaxed text-ink-800">
                   <strong>CONTRATANTE:</strong>{' '}

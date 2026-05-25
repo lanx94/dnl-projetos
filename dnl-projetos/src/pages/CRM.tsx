@@ -1,5 +1,6 @@
 import { useEffect, useState, FormEvent, DragEvent } from 'react'
-import { Plus, X, Edit2, Trash2, Calendar, Building2, User, GripVertical } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Plus, X, Edit2, Trash2, Calendar, Building2, User, GripVertical, FileText } from 'lucide-react'
 import { api } from '../lib/api'
 import PageHeader from '../components/ui/PageHeader'
 import type { Lead, LeadCreateInput, StatusLead, Cliente, User as Usuario } from '@shared/types'
@@ -63,6 +64,7 @@ const COLUNAS: Array<{
 ]
 
 export default function CRMPage() {
+  const navigate = useNavigate()
   const [leads, setLeads] = useState<Lead[]>([])
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [usuarios, setUsuarios] = useState<Usuario[]>([])
@@ -196,6 +198,18 @@ export default function CRMPage() {
                                 'pt-BR'
                               )}
                             </p>
+                          )}
+                          {lead.orcamento_id && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                navigate('/orcamentos', { state: { abrirId: lead.orcamento_id } })
+                              }}
+                              className="text-[10px] text-purple-700 font-mono flex items-center gap-1 mt-1 hover:underline"
+                            >
+                              <FileText size={9} /> {lead.orcamento_numero || `Orç. #${lead.orcamento_id}`}
+                            </button>
                           )}
                         </div>
                       </div>

@@ -250,6 +250,18 @@ export const api = {
     deletar: (id: number) => del<{ success: boolean; error?: string }>(`/leads/${id}`)
   },
 
+  orcamentosExtra: {
+    enviarParaCRM: (orcamento_id: number, nome: string, valor: number, cliente_id?: number) =>
+      post<Lead>('/leads', {
+        nome,
+        status: 'orcamento' as StatusLead,
+        valor_estimado: valor,
+        cliente_id,
+        orcamento_id,
+        observacoes: `Lead gerado automaticamente a partir de orçamento.`
+      })
+  },
+
   exports: {
     pontosExcel: async (filtros: { inicio: string; fim: string; usuario_id?: number }) => {
       const qs = new URLSearchParams({ inicio: filtros.inicio, fim: filtros.fim })
@@ -286,6 +298,11 @@ export const api = {
         input.click()
       })
     }
+  },
+
+  configuracoes: {
+    obter: () => get<Record<string, string>>('/configuracoes'),
+    salvar: (dados: Record<string, string>) => put<{ ok: boolean }>('/configuracoes', dados)
   },
 
   // Alias mantido para compatibilidade com pages que usam window.api.export.*

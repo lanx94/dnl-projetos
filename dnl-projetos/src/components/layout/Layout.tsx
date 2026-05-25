@@ -27,10 +27,13 @@ import {
   Scale,
   Target,
   ClipboardList,
-  CalendarDays
+  CalendarDays,
+  CalendarCheck,
+  Ruler,
+  Settings2
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
-import logoDNL from '../../assets/logo-dnl.png'
+import logoDNL from '../../assets/logo-dnl-new.svg'
 
 type MenuItem = { to: string; icon: any; label: string; numero: string }
 type MenuGrupo = { grupo: string; itens: MenuItem[] }
@@ -46,8 +49,9 @@ const menuPrincipal: MenuGrupo[] = [
   {
     grupo: 'Registro de tempo',
     itens: [
-      { to: '/ponto', icon: Clock, label: 'Ponto', numero: '03' },
-      { to: '/cronometro', icon: Timer, label: 'Cronômetro', numero: '04' },
+      { to: '/ponto',     icon: Clock,         label: 'Ponto',        numero: '03' },
+      { to: '/cronometro',icon: Timer,          label: 'Cronômetro',   numero: '04' },
+      { to: '/feriados',  icon: CalendarCheck,  label: 'Feriados SP',  numero: 'F1' },
     ]
   },
   {
@@ -60,9 +64,10 @@ const menuPrincipal: MenuGrupo[] = [
   {
     grupo: 'Desenvolvimento',
     itens: [
-      { to: '/projetos', icon: FolderKanban, label: 'Projetos', numero: '07' },
-      { to: '/metas', icon: Target, label: 'Metas SMART', numero: '08' },
-      { to: '/conhecimento', icon: BookOpen, label: 'Base técnica', numero: '09' },
+      { to: '/projetos',   icon: FolderKanban, label: 'Projetos',    numero: '07' },
+      { to: '/metas',      icon: Target,        label: 'Metas SMART', numero: '08' },
+      { to: '/conhecimento',icon: BookOpen,     label: 'Base técnica',numero: '09' },
+      { to: '/conversao',  icon: Ruler,         label: 'Conversão',   numero: 'F2' },
     ]
   },
   {
@@ -116,8 +121,9 @@ const menuAdmin: MenuGrupo[] = [
   {
     grupo: 'Sistema',
     itens: [
-      { to: '/admin', icon: ShieldCheck, label: 'Painel Admin', numero: 'B2' },
-      { to: '/backup', icon: DatabaseBackup, label: 'Backup', numero: 'B3' },
+      { to: '/admin',          icon: ShieldCheck,    label: 'Painel Admin',   numero: 'B2' },
+      { to: '/configuracoes',  icon: Settings2,      label: 'Dados Empresa',  numero: 'B4' },
+      { to: '/backup',         icon: DatabaseBackup, label: 'Backup',         numero: 'B3' },
     ]
   },
 ]
@@ -156,7 +162,7 @@ export default function Layout({ children }: { children: ReactNode }) {
     <div className="min-h-screen flex bg-cream-100">
       <aside className="w-64 border-r border-ink-300/40 bg-cream-50 flex flex-col">
         <div className="px-6 pt-5 pb-5 border-b border-ink-300/30">
-          <img src={logoDNL} alt="DNL Projetos" className="w-28 h-auto mx-auto" />
+          <img src={logoDNL} alt="DNL Projetos" className="w-full h-auto mx-auto" />
           <p className="font-mono text-[10px] uppercase tracking-wider text-ink-400 mt-2 text-center">
             Sistema interno · v0.3
           </p>

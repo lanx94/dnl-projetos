@@ -5,7 +5,7 @@ import type { Lead, LeadCreateInput, StatusLead } from '../../shared/types'
 
 const router = Router()
 
-const SELECT = `SELECT l.*, u.nome as responsavel_nome, c.nome as cliente_nome FROM leads l LEFT JOIN usuarios u ON u.id = l.responsavel_id LEFT JOIN clientes c ON c.id = l.cliente_id`
+const SELECT = `SELECT l.*, u.nome as responsavel_nome, c.nome as cliente_nome, o.numero as orcamento_numero FROM leads l LEFT JOIN usuarios u ON u.id = l.responsavel_id LEFT JOIN clientes c ON c.id = l.cliente_id LEFT JOIN orcamentos o ON o.id = l.orcamento_id`
 
 // GET /api/leads?status=
 router.get('/', requireRole('admin', 'rh'), (req, res) => {
@@ -25,7 +25,7 @@ router.post('/', requireRole('admin', 'rh'), (req, res) => {
     const input: LeadCreateInput = req.body
     const db = getDatabase()
     const maxOrdem = (db.prepare(`SELECT MAX(ordem) as m FROM leads WHERE status = ?`).get(input.status || 'lead') as any)?.m || 0
-    const r = db.prepare(`INSERT INTO leads (nome, status, valor_estimado, responsavel_id, cliente_id, contatado_em, data_alvo, observacoes, ordem) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(input.nome, input.status || 'lead', input.valor_estimado || 0, input.responsavel_id || null, input.cliente_id || null, input.contatado_em || null, input.data_alvo || null, input.observacoes || null, maxOrdem + 1)
+    const r = db.prepare(`INSERT INTO leads (nome, status, valor_estimado, responsavel_id, cliente_id, orcamento_id, contatado_em, data_alvo, observacoes, ordem) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(input.nome, input.status || 'lead', input.valor_estimado || 0, input.responsavel_id || null, input.cliente_id || null, input.orcamento_id || null, input.contatado_em || null, input.data_alvo || null, input.observacoes || null, maxOrdem + 1)
     res.json(db.prepare(`${SELECT} WHERE l.id = ?`).get(r.lastInsertRowid) as Lead)
   } catch (err: any) {
     res.status(500).json({ error: err.message })
@@ -38,7 +38,7 @@ router.put('/:id', requireRole('admin', 'rh'), (req, res) => {
     const id = Number(req.params.id)
     const input: Partial<LeadCreateInput> = req.body
     const db = getDatabase()
-    const permitidos = new Set(['nome', 'status', 'valor_estimado', 'responsavel_id', 'cliente_id', 'contatado_em', 'data_alvo', 'observacoes'])
+    const permitidos = new Set(['nome', 'status', 'valor_estimado', 'responsavel_id', 'cliente_id', 'orcamento_id', 'contatado_em', 'data_alvo', 'observacoes'])
     const campos: string[] = []
     const valores: any[] = []
     for (const [k, v] of Object.entries(input)) {

@@ -363,6 +363,11 @@ function runMigrations(db: Database.Database) {
       FOREIGN KEY (criado_por_id) REFERENCES usuarios(id) ON DELETE CASCADE
     );
     CREATE INDEX IF NOT EXISTS idx_calendario_status ON calendario_postagem(status, ordem);
+
+    CREATE TABLE IF NOT EXISTS configuracoes (
+      chave TEXT PRIMARY KEY,
+      valor TEXT NOT NULL DEFAULT ''
+    );
   `)
 
   migrarColunasNovas(db)
@@ -410,6 +415,9 @@ function migrarColunasNovas(db: Database.Database) {
   adicionar('contratos', 'tipos_contrato_json', "TEXT NOT NULL DEFAULT '[]'")
   adicionar('contratos', 'contratada_qualificacao', 'TEXT')
   adicionar('projetos', 'cidade', 'TEXT')
+  adicionar('leads', 'orcamento_id', 'INTEGER')
+  adicionar('orcamentos', 'projetos_necessarios', 'TEXT')
+  adicionar('orcamentos', 'incluso', 'TEXT')
 }
 
 export function seedInitialData(db: Database.Database) {
