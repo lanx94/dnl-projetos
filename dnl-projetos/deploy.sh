@@ -1,24 +1,24 @@
 #!/bin/bash
-# =============================================================================
-# deploy.sh — Atualizar o sistema após mudanças no código
-# Rodar dentro da EC2: bash deploy.sh
-# =============================================================================
 set -e
 
+echo "==> Git pull..."
 cd /home/ubuntu/dnl-projetos
+git fetch origin
+git reset --hard origin/master
 
-echo "=== Baixando atualizações ==="
-git pull origin main
+echo "==> Sincronizando arquivos..."
+cp -r /home/ubuntu/dnl-projetos/dnl-projetos/src /home/ubuntu/dnl-projetos/
+cp -r /home/ubuntu/dnl-projetos/dnl-projetos/server /home/ubuntu/dnl-projetos/
+cp -r /home/ubuntu/dnl-projetos/dnl-projetos/shared /home/ubuntu/dnl-projetos/
 
-echo "=== Instalando dependências ==="
-npm install --production=false
+echo "==> Instalando dependências..."
+npm install --omit=dev 2>/dev/null || npm install
 
-echo "=== Build ==="
+echo "==> Build..."
 npm run build
 
-echo "=== Reiniciando serviço ==="
+echo "==> Reiniciando servidor..."
 pm2 restart dnl-projetos
 
-echo ""
-echo "Deploy concluído! $(date)"
+echo "==> Deploy concluído!"
 pm2 status
