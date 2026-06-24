@@ -8,7 +8,7 @@ services:
     environment:
       POSTGRES_DB: keycloak
       POSTGRES_USER: keycloak
-      POSTGRES_PASSWORD: ${KC_DB_PASSWORD:-keycloak_secret}
+      POSTGRES_PASSWORD: ${KC_DB_PASSWORD:?defina KC_DB_PASSWORD forte no .env}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -23,12 +23,12 @@ services:
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
       KC_DB_USERNAME: keycloak
-      KC_DB_PASSWORD: ${KC_DB_PASSWORD:-keycloak_secret}
+      KC_DB_PASSWORD: ${KC_DB_PASSWORD:?defina KC_DB_PASSWORD forte no .env}
       KC_HOSTNAME: ${KC_HOSTNAME:-localhost}
       KC_HTTP_ENABLED: 'true'
       KC_PROXY: edge
       KEYCLOAK_ADMIN: ${KC_ADMIN_USER:-admin}
-      KEYCLOAK_ADMIN_PASSWORD: ${KC_ADMIN_PASSWORD:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KC_ADMIN_PASSWORD:?defina KC_ADMIN_PASSWORD forte no .env}
     ports:
       - '8080:8080'
     depends_on:
@@ -49,8 +49,10 @@ services:
       DB_PATH: /data/dnl-projetos.db
     volumes:
       - sqlite_data:/data
+    # API NÃO exposta publicamente — só acessível na rede interna (via Nginx) e em 127.0.0.1 do host.
+    # Evita furar o proxy reverso e bloqueia spoofing de X-Forwarded-For vindo da internet.
     ports:
-      - '3001:3001'
+      - '127.0.0.1:3001:3001'
     depends_on:
       - keycloak
     networks:

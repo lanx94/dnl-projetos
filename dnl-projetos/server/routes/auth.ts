@@ -7,42 +7,67 @@ import type { UserCreateInput, UserUpdateInput, AuthResponse } from '../../share
 
 const router = Router()
 
-// Rate limiting simples em memória para login (max 10 tentativas / 15 min por IP)
-const loginAttempts = new Map<string, { count: number; resetAt: number }>()
-const LOGIN_MAX = 10
+// Rate limiting em memória para login. Dois eixos independentes:
+//  - por IP  (5 tentativas / 15 min): trava um atacante de uma única origem.
+//  - por conta/email (10 tentativas / 15 min): trava brute force distribuído
+//    por vários IPs contra a mesma conta.
 const LOGIN_WINDOW_MS = 15 * 60 * 1000
+const IP_MAX = 5
+const ACCOUNT_MAX = 10
 
-function checkRateLimit(ip: string): boolean {
+const ipAttempts = new Map<string, { count: number; resetAt: number }>()
+const accountAttempts = new Map<string, { count: number; resetAt: number }>()
+
+// Conta uma tentativa contra um bucket; retorna false se já estourou o limite.
+function hit(store: Map<string, { count: number; resetAt: number }>, key: string, max: number): boolean {
   const now = Date.now()
-  const entry = loginAttempts.get(ip)
+  const entry = store.get(key)
   if (!entry || entry.resetAt < now) {
-    loginAttempts.set(ip, { count: 1, resetAt: now + LOGIN_WINDOW_MS })
+    store.set(key, { count: 1, resetAt: now + LOGIN_WINDOW_MS })
     return true
   }
-  if (entry.count >= LOGIN_MAX) return false
+  if (entry.count >= max) return false
   entry.count++
   return true
 }
 
-function clearRateLimit(ip: string) {
-  loginAttempts.delete(ip)
+// Limpa entradas expiradas para não acumular memória ao longo do tempo.
+function sweep(store: Map<string, { count: number; resetAt: number }>) {
+  const now = Date.now()
+  for (const [key, entry] of store) {
+    if (entry.resetAt < now) store.delete(key)
+  }
+}
+setInterval(() => { sweep(ipAttempts); sweep(accountAttempts) }, LOGIN_WINDOW_MS).unref?.()
+
+function checkRateLimit(ip: string, account: string): boolean {
+  // Avalia ambos antes de retornar para que cada tentativa conte nos dois buckets.
+  const ipOk = hit(ipAttempts, ip, IP_MAX)
+  const accountOk = account ? hit(accountAttempts, account, ACCOUNT_MAX) : true
+  return ipOk && accountOk
+}
+
+function clearRateLimit(ip: string, account: string) {
+  ipAttempts.delete(ip)
+  if (account) accountAttempts.delete(account)
 }
 
 // POST /api/auth/login — público (antes do authMiddleware no index.ts)
 router.post('/login', async (req, res) => {
   try {
     const ip = String(req.ip || req.socket.remoteAddress || 'unknown')
-    if (!checkRateLimit(ip)) {
-      res.status(429).json({ success: false, error: 'Muitas tentativas de login. Aguarde 15 minutos.' } as AuthResponse)
-      return
-    }
     const { email, senha } = req.body
     if (!email || !senha) {
       res.status(400).json({ success: false, error: 'Email e senha obrigatórios' } as AuthResponse)
       return
     }
+    const emailNorm = String(email).trim().toLowerCase()
+    if (!checkRateLimit(ip, emailNorm)) {
+      res.status(429).json({ success: false, error: 'Muitas tentativas de login. Aguarde 15 minutos.' } as AuthResponse)
+      return
+    }
     const db = getDatabase()
-    const row = db.prepare('SELECT * FROM usuarios WHERE email = ? AND ativo = 1').get(email.trim().toLowerCase()) as any
+    const row = db.prepare('SELECT * FROM usuarios WHERE email = ? AND ativo = 1').get(emailNorm) as any
     if (!row || !row.senha_hash || !bcrypt.compareSync(senha, row.senha_hash)) {
       res.status(401).json({ success: false, error: 'Email ou senha incorretos' } as AuthResponse)
       return
@@ -50,7 +75,7 @@ router.post('/login', async (req, res) => {
     const jwtKey = process.env.JWT_SECRET
     if (!jwtKey) { res.status(500).json({ success: false, error: 'JWT_SECRET não configurado' }); return }
     const secret = new TextEncoder().encode(jwtKey)
-    clearRateLimit(ip)
+    clearRateLimit(ip, emailNorm)
     const token = await new SignJWT({ sub: String(row.id), email: row.email, nome: row.nome, role: row.role })
       .setProtectedHeader({ alg: 'HS256' })
       .setIssuedAt()

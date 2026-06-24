@@ -1,0 +1,2 @@
+# Configuração local do Claude Code (caminhos e permissões da máquina) — não versionar.
+.claude/settings.local.json

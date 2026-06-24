@@ -453,7 +453,9 @@ export function seedInitialData(db: Database.Database) {
   }
 
   seedClausulas(db)
-  seedDadosExemplo(db)
+  // Dados de exemplo (clientes/projetos/funcionários fictícios) só em desenvolvimento.
+  // Em produção, criar usuários reais via tela de admin evita CPFs e logins de teste vazados.
+  if (process.env.NODE_ENV !== 'production') seedDadosExemplo(db)
 }
 
 function seedDadosExemplo(db: Database.Database) {

@@ -47,10 +47,7 @@ export default function Login() {
         />
 
         <div className="relative">
-          <img src={logoDNL} alt="DNL Projetos" className="w-96 h-auto" />
-          <p className="font-mono text-[10px] uppercase tracking-widest text-cream-100/40 mt-2">
-            Sistema interno
-          </p>
+          <img src={logoDNL} alt="" className="w-96 h-auto" />
         </div>
 
         <div className="relative max-w-lg">
@@ -62,14 +59,10 @@ export default function Login() {
             cada <em className="text-terra-400">projeto</em>,<br />
             cada revisão.
           </h2>
-          <p className="text-cream-100/60 text-sm mt-6 max-w-md leading-relaxed">
-            Plataforma interna de gestão para a equipe DNL. Controle de ponto,
-            cronometragem por projeto e relatórios consolidados.
-          </p>
         </div>
 
         <div className="relative font-mono text-[10px] uppercase tracking-widest text-cream-100/40">
-          {new Date().getFullYear()} · DNL Projetos
+          {new Date().getFullYear()}
         </div>
       </div>
 
@@ -80,8 +73,7 @@ export default function Login() {
           </p>
           <h2 className="font-display text-4xl text-ink-900 mb-2">Entre na conta.</h2>
           <p className="text-ink-600 text-sm mb-10">
-            Use seu email corporativo{' '}
-            <span className="font-mono text-ink-900">@dnlprojetos.com</span>
+            Informe suas credenciais de acesso.
           </p>
 
           {!apiAvailable && (
@@ -96,7 +88,7 @@ export default function Login() {
               <input
                 type="email"
                 className="input-field"
-                placeholder="seu.nome@dnlprojetos.com"
+                placeholder="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 autoFocus

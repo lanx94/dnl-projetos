@@ -29,13 +29,16 @@ cd /home/ubuntu/dnl-projetos
 echo "=== [6/7] Configurando variáveis de ambiente ==="
 echo ""
 echo "Preencha as variáveis abaixo:"
-read -p "JWT_SECRET (string longa e aleatória): " JWT_SECRET
-read -p "IP ou domínio público da EC2 (ex: http://1.2.3.4 ou https://seudominio.com): " PUBLIC_URL
+read -p "Domínio (ex: dnlusucapiao.com.br): " DOMAIN
+read -p "Email para o certificado Let's Encrypt: " LE_EMAIL
+
+# Gera um JWT_SECRET forte automaticamente (não depende de digitação manual).
+JWT_SECRET=$(openssl rand -base64 48)
 
 cat > .env << EOF
 PORT=3001
 DB_PATH=/data/dnl-projetos.db
-CORS_ORIGINS=$PUBLIC_URL
+CORS_ORIGINS=https://$DOMAIN
 JWT_SECRET=$JWT_SECRET
 NODE_ENV=production
 EOF
@@ -47,17 +50,45 @@ pm2 start ecosystem.config.js --env production
 pm2 save
 pm2 startup | tail -1 | sudo bash
 
-echo "=== Configurando Nginx ==="
-sudo cp nginx.conf /etc/nginx/sites-available/dnl-projetos
-sudo ln -sf /etc/nginx/sites-available/dnl-projetos /etc/nginx/sites-enabled/dnl-projetos
+echo "=== Configurando Nginx + HTTPS (Let's Encrypt) ==="
 sudo rm -f /etc/nginx/sites-enabled/default
+
+# 1) Sobe um Nginx mínimo só na porta 80 para o desafio ACME do Certbot.
+#    (O nginx.conf final referencia certificados que ainda não existem, então
+#     não pode ser ativado antes da emissão.)
+sudo mkdir -p /var/www/html
+sudo tee /etc/nginx/sites-available/dnl-acme > /dev/null << EOF
+server {
+    listen 80;
+    server_name $DOMAIN www.$DOMAIN;
+    location /.well-known/acme-challenge/ { root /var/www/html; }
+    location / { return 404; }
+}
+EOF
+sudo ln -sf /etc/nginx/sites-available/dnl-acme /etc/nginx/sites-enabled/dnl-acme
 sudo nginx -t && sudo systemctl restart nginx
 sudo systemctl enable nginx
+
+# 2) Instala o Certbot e emite o certificado (modo webroot, sem parar o Nginx).
+sudo apt-get install -y certbot
+sudo certbot certonly --webroot -w /var/www/html \
+  -d "$DOMAIN" -d "www.$DOMAIN" \
+  --email "$LE_EMAIL" --agree-tos --non-interactive
+
+# 3) Agora que o certificado existe, ativa o config HTTPS definitivo.
+sudo sed -i "s/dnlusucapiao\.com\.br/$DOMAIN/g" nginx.conf
+sudo cp nginx.conf /etc/nginx/sites-available/dnl-projetos
+sudo rm -f /etc/nginx/sites-enabled/dnl-acme
+sudo ln -sf /etc/nginx/sites-available/dnl-projetos /etc/nginx/sites-enabled/dnl-projetos
+sudo nginx -t && sudo systemctl restart nginx
+
+# 4) Renovação automática: o Certbot já instala um timer systemd. Garante o reload do Nginx.
+echo "Certbot renova o certificado automaticamente (timer systemd). Teste: sudo certbot renew --dry-run"
 
 echo ""
 echo "============================================"
 echo "  Deploy concluído!"
-echo "  Acesse: $PUBLIC_URL"
-echo "  Login:  admin@dnlprojetos.com / Admin@2025"
-echo "  TROQUE A SENHA IMEDIATAMENTE!"
+echo "  Acesse: https://$DOMAIN"
+echo "  Login:  admin@dnlprojetos.com"
+echo "  >> Troque a senha do admin IMEDIATAMENTE no primeiro acesso. <<"
 echo "============================================"

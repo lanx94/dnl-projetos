@@ -35,12 +35,39 @@ const PORT = Number(process.env.PORT) || 3001
 app.set('trust proxy', 1)
 
 // ── Security headers ──────────────────────────────────────────────────────────
+const isProd = process.env.NODE_ENV === 'production'
+const kcOrigin = process.env.KEYCLOAK_URL ? (() => { try { return new URL(process.env.KEYCLOAK_URL!).origin } catch { return '' } })() : ''
+const csp = [
+  "default-src 'self'",
+  "img-src 'self' data:",
+  "style-src 'self' 'unsafe-inline'",        // libs de UI (Recharts etc.) usam estilos inline
+  "script-src 'self'",
+  "font-src 'self' data:",
+  `connect-src 'self' ${kcOrigin}`.trim(),    // API própria + Keycloak (se configurado)
+  "frame-ancestors 'none'",
+  "base-uri 'self'",
+  "object-src 'none'",
+].join('; ')
+
 app.use((_req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff')
   res.setHeader('X-Frame-Options', 'DENY')
-  res.setHeader('X-XSS-Protection', '1; mode=block')
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
+  res.setHeader('Content-Security-Policy', csp)
+  if (isProd) res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
   res.removeHeader('X-Powered-By')
+  next()
+})
+
+// ── Sanitiza erros 5xx em produção (não vaza stack/SQL/caminhos ao cliente) ─────
+app.use((_req, res, next) => {
+  const orig = res.json.bind(res)
+  res.json = ((body?: any) => {
+    if (isProd && res.statusCode >= 500 && body && typeof body === 'object' && 'error' in body) {
+      return orig({ ...body, error: 'Erro interno do servidor' })
+    }
+    return orig(body)
+  }) as typeof res.json
   next()
 })
 
