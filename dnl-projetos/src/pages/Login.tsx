@@ -2,7 +2,7 @@ import { useState, FormEvent, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { ArrowRight } from 'lucide-react'
-import logoDNL from '../assets/logo-dnl-light.svg'
+import logoDNL from '../assets/logo-dnl.png'
 
 export default function Login() {
   const { user, login, apiAvailable } = useAuth()
@@ -47,7 +47,9 @@ export default function Login() {
         />
 
         <div className="relative">
-          <img src={logoDNL} alt="" className="w-96 h-auto" />
+          <div className="inline-block bg-cream-50 rounded-2xl px-8 py-6 shadow-lift">
+            <img src={logoDNL} alt="DNL Projetos" className="w-48 h-auto" />
+          </div>
         </div>
 
         <div className="relative max-w-lg">
