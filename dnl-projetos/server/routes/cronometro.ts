@@ -97,6 +97,11 @@ router.get('/ativo', (req, res) => {
   try {
     const usuarioId = resolverUsuarioAlvo(req, req.query.usuario_id)
     const c = getDatabase().prepare(`SELECT cr.*, p.nome as projeto_nome FROM cronometros cr LEFT JOIN projetos p ON p.id = cr.projeto_id WHERE cr.usuario_id = ? AND cr.fim IS NULL`).get(usuarioId) as any
+    if (c) {
+      // Calculado no servidor (mesmo relogio que gravou o inicio) pra nao
+      // depender do relogio do navegador de quem esta vendo o cronometro.
+      c.duracao_segundos = Math.max(0, Math.floor((Date.now() - new Date(c.inicio.replace(' ', 'T')).getTime()) / 1000))
+    }
     res.json(c || null)
   } catch (err: any) {
     res.status(400).json({ error: err.message })

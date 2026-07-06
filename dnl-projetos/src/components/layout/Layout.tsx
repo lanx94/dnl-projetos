@@ -160,8 +160,8 @@ export default function Layout({ children }: { children: ReactNode }) {
   const ehAdminOuRH = user?.role === 'admin' || user?.role === 'rh'
 
   return (
-    <div className="min-h-screen flex bg-cream-100">
-      <aside className="w-64 border-r border-ink-300/40 bg-cream-50 flex flex-col">
+    <div className="h-screen flex bg-cream-100">
+      <aside className="w-64 h-screen shrink-0 border-r border-ink-300/40 bg-cream-50 flex flex-col">
         <div className="px-6 pt-5 pb-5 border-b border-ink-300/30">
           <img src={logoDNL} alt="DNL Projetos" className="w-full h-auto mx-auto" />
           <p className="font-mono text-[10px] uppercase tracking-wider text-ink-400 mt-2 text-center">

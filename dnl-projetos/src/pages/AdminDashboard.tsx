@@ -196,22 +196,19 @@ function CardEstatistica({
 function CronometroLinha({
   cronometro
 }: {
-  cronometro: { usuario_nome: string; projeto_nome: string; inicio: string }
+  cronometro: { usuario_nome: string; projeto_nome: string; inicio: string; duracao_segundos: number }
 }) {
-  const [tempo, setTempo] = useState('00:00:00')
+  // Semente vem do servidor (duracao_segundos) — evita comparar o relogio
+  // de quem esta vendo o painel com o do servidor, so incrementa localmente.
+  const [seg, setSeg] = useState(cronometro.duracao_segundos)
 
   useEffect(() => {
-    const calc = () => {
-      const seg = Math.floor((Date.now() - new Date(cronometro.inicio).getTime()) / 1000)
-      const h = String(Math.floor(seg / 3600)).padStart(2, '0')
-      const m = String(Math.floor((seg % 3600) / 60)).padStart(2, '0')
-      const s = String(seg % 60).padStart(2, '0')
-      setTempo(`${h}:${m}:${s}`)
-    }
-    calc()
-    const t = setInterval(calc, 1000)
+    setSeg(cronometro.duracao_segundos)
+    const t = setInterval(() => setSeg((s) => s + 1), 1000)
     return () => clearInterval(t)
-  }, [cronometro.inicio])
+  }, [cronometro.inicio, cronometro.duracao_segundos])
+
+  const tempo = `${String(Math.floor(seg / 3600)).padStart(2, '0')}:${String(Math.floor((seg % 3600) / 60)).padStart(2, '0')}:${String(seg % 60).padStart(2, '0')}`
 
   return (
     <div className="flex items-center justify-between py-2 px-3 rounded-md bg-cream-200/50">

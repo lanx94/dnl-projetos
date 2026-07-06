@@ -274,6 +274,7 @@ export interface DashboardAdmin {
     usuario_nome: string
     projeto_nome: string
     inicio: string
+    duracao_segundos: number
   }>
   pontos_hoje: Array<{
     usuario_id: number

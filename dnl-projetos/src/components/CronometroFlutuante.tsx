@@ -46,12 +46,12 @@ export default function CronometroFlutuante() {
 
   useEffect(() => {
     if (!ativo) return
-    const inicioMs = new Date(ativo.inicio.replace(' ', 'T')).getTime()
-    const calc = () => setTempo(Math.floor((Date.now() - inicioMs) / 1000))
-    calc()
-    const t = setInterval(calc, 1000)
+    // Semente vem do servidor (duracao_segundos) — evita comparar o relogio
+    // do navegador com o do servidor, so incrementa localmente a partir dai.
+    setTempo(ativo.duracao_segundos ?? 0)
+    const t = setInterval(() => setTempo((s) => s + 1), 1000)
     return () => clearInterval(t)
-  }, [ativo])
+  }, [ativo?.id, ativo?.duracao_segundos])
 
   async function parar() {
     if (!ativo) return

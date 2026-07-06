@@ -288,17 +288,16 @@ function CronometroAtivo({
   cronometro: Cronometro
   onParar: () => void
 }) {
-  const [tempo, setTempo] = useState(0)
+  // Semente vem do servidor (duracao_segundos, calculado com o mesmo relogio
+  // que gravou o inicio) — o front so incrementa localmente a partir dai,
+  // sem comparar o relogio do navegador com o do servidor.
+  const [tempo, setTempo] = useState(cronometro.duracao_segundos ?? 0)
 
   useEffect(() => {
-    const inicioMs = parseSQLiteDate(cronometro.inicio).getTime()
-    const calc = () => {
-      setTempo(Math.floor((Date.now() - inicioMs) / 1000))
-    }
-    calc()
-    const t = setInterval(calc, 1000)
+    setTempo(cronometro.duracao_segundos ?? 0)
+    const t = setInterval(() => setTempo((s) => s + 1), 1000)
     return () => clearInterval(t)
-  }, [cronometro.inicio])
+  }, [cronometro.id, cronometro.duracao_segundos])
 
   return (
     <div className="relative card p-10 mb-8 overflow-hidden fade-in">

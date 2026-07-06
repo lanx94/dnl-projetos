@@ -22,7 +22,8 @@ router.get('/dashboard', requireRole('admin', 'rh'), (req, res) => {
     const total_projetos_ativos = (db.prepare("SELECT COUNT(*) as n FROM projetos WHERE status = 'em_andamento'").get() as any).n
 
     // Cronômetros ativos
-    const cronometros_ativos = db.prepare(`SELECT u.nome as usuario_nome, p.nome as projeto_nome, cr.inicio FROM cronometros cr JOIN usuarios u ON u.id = cr.usuario_id JOIN projetos p ON p.id = cr.projeto_id WHERE cr.fim IS NULL`).all() as any[]
+    const cronometros_ativos = (db.prepare(`SELECT u.nome as usuario_nome, p.nome as projeto_nome, cr.inicio FROM cronometros cr JOIN usuarios u ON u.id = cr.usuario_id JOIN projetos p ON p.id = cr.projeto_id WHERE cr.fim IS NULL`).all() as any[])
+      .map((c) => ({ ...c, duracao_segundos: Math.max(0, Math.floor((Date.now() - new Date(c.inicio.replace(' ', 'T')).getTime()) / 1000)) }))
     const funcionarios_trabalhando = cronometros_ativos.length
 
     // Total horas do mês
