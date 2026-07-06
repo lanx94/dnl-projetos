@@ -33,6 +33,7 @@ import {
   Settings2
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
+import CronometroFlutuante from '../CronometroFlutuante'
 import logoDNL from '../../assets/logo-dnl-new.svg'
 
 type MenuItem = { to: string; icon: any; label: string; numero: string }
@@ -221,6 +222,8 @@ export default function Layout({ children }: { children: ReactNode }) {
       <main className="flex-1 overflow-auto">
         <div className="max-w-6xl mx-auto px-10 py-10">{children}</div>
       </main>
+
+      <CronometroFlutuante />
     </div>
   )
 }
