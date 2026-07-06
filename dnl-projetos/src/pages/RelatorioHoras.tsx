@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Calendar, User as UserIcon } from 'lucide-react'
+import { Calendar, User as UserIcon, Pencil } from 'lucide-react'
 import { api } from '../lib/api'
 import PageHeader from '../components/ui/PageHeader'
 import { useAuth } from '../contexts/AuthContext'
-import type { RelatorioHoras, User } from '@shared/types'
+import ModalPonto from '../components/ModalPonto'
+import type { RelatorioHoras, Ponto, TipoPonto, User } from '@shared/types'
 
 function inicioDoMes(): string {
   const d = new Date()
@@ -24,8 +25,13 @@ export default function RelatorioHorasPage() {
   const [usuarios, setUsuarios] = useState<User[]>([])
   const [usuarioAlvo, setUsuarioAlvo] = useState<number | ''>('')
   const [carregando, setCarregando] = useState(false)
+  const [modal, setModal] = useState<{ modo: 'criar' | 'editar'; ponto?: Ponto; tipo: TipoPonto; data: string } | null>(null)
 
   const ehAdmin = user?.role === 'admin'
+
+  function abrirEdicao(ponto: Ponto | undefined, tipo: TipoPonto, data: string) {
+    setModal(ponto ? { modo: 'editar', ponto, tipo, data } : { modo: 'criar', tipo, data })
+  }
 
   useEffect(() => {
     if (ehAdmin) {
@@ -186,16 +192,16 @@ export default function RelatorioHorasPage() {
                       </span>
                     </Td>
                     <Td>
-                      <Hora ts={entrada?.timestamp} />
+                      <HoraEditavel ponto={entrada} tipo="entrada" data={d.data} onEditar={abrirEdicao} />
                     </Td>
                     <Td>
-                      <Hora ts={almIni?.timestamp} />
+                      <HoraEditavel ponto={almIni} tipo="almoco_inicio" data={d.data} onEditar={abrirEdicao} />
                     </Td>
                     <Td>
-                      <Hora ts={almFim?.timestamp} />
+                      <HoraEditavel ponto={almFim} tipo="almoco_fim" data={d.data} onEditar={abrirEdicao} />
                     </Td>
                     <Td>
-                      <Hora ts={saida?.timestamp} />
+                      <HoraEditavel ponto={saida} tipo="saida" data={d.data} onEditar={abrirEdicao} />
                     </Td>
                     <Td align="right">
                       <span className="font-mono text-xs text-ink-500">{d.total_paradas}</span>
@@ -225,6 +231,21 @@ export default function RelatorioHorasPage() {
           </table>
         )}
       </div>
+
+      {modal && (
+        <ModalPonto
+          modo={modal.modo}
+          ponto={modal.ponto}
+          tipoPadrao={modal.tipo}
+          dataPadrao={modal.data}
+          usuarioId={usuarioAlvo ? Number(usuarioAlvo) : undefined}
+          onFechar={() => setModal(null)}
+          onSalvo={() => {
+            setModal(null)
+            consultar()
+          }}
+        />
+      )}
     </>
   )
 }
@@ -270,12 +291,38 @@ function Td({ children, align = 'left', colSpan }: any) {
   )
 }
 
-function Hora({ ts }: { ts?: string }) {
-  if (!ts) return <span className="text-ink-300">—</span>
+function HoraEditavel({
+  ponto,
+  tipo,
+  data,
+  onEditar
+}: {
+  ponto?: Ponto
+  tipo: TipoPonto
+  data: string
+  onEditar: (ponto: Ponto | undefined, tipo: TipoPonto, data: string) => void
+}) {
   return (
-    <span className="font-mono text-sm text-ink-700 tabular-nums">
-      {new Date(ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-    </span>
+    <div className="flex items-center gap-1.5 group">
+      {ponto ? (
+        <span className="font-mono text-sm text-ink-700 tabular-nums">
+          {new Date(ponto.timestamp.replace(' ', 'T')).toLocaleTimeString('pt-BR', {
+            hour: '2-digit',
+            minute: '2-digit'
+          })}
+        </span>
+      ) : (
+        <span className="text-ink-300">—</span>
+      )}
+      <button
+        type="button"
+        onClick={() => onEditar(ponto, tipo, data)}
+        className="opacity-0 group-hover:opacity-100 transition-opacity text-ink-400 hover:text-ink-900"
+        title={ponto ? 'Editar este ponto' : 'Registrar ponto esquecido'}
+      >
+        <Pencil size={12} />
+      </button>
+    </div>
   )
 }
 
