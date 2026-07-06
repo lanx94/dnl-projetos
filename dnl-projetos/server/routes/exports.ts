@@ -1,7 +1,6 @@
 import { Router } from 'express'
 import ExcelJS from 'exceljs'
 import { getDatabase } from '../database/db'
-import { requireRole } from '../middleware/auth'
 
 const router = Router()
 
@@ -28,8 +27,8 @@ function aplicarCabecalho(ws: ExcelJS.Worksheet) {
   row.height = 22
 }
 
-// GET /api/exports/pontos-excel?inicio=&fim=&usuario_id=
-router.get('/pontos-excel', requireRole('admin', 'rh'), async (req, res) => {
+// GET /api/exports/pontos-excel?inicio=&fim=&usuario_id= (usuario_id só é respeitado se admin/rh)
+router.get('/pontos-excel', async (req, res) => {
   try {
     const u = req.currentUser
     const { inicio, fim, usuario_id } = req.query as { inicio: string; fim: string; usuario_id?: string }
@@ -69,8 +68,8 @@ router.get('/pontos-excel', requireRole('admin', 'rh'), async (req, res) => {
   }
 })
 
-// GET /api/exports/horas-projeto-excel?inicio=&fim=&usuario_id=&projeto_id=
-router.get('/horas-projeto-excel', requireRole('admin', 'rh'), async (req, res) => {
+// GET /api/exports/horas-projeto-excel?inicio=&fim=&usuario_id=&projeto_id= (usuario_id só é respeitado se admin/rh)
+router.get('/horas-projeto-excel', async (req, res) => {
   try {
     const u = req.currentUser
     const { inicio, fim, usuario_id, projeto_id } = req.query as any

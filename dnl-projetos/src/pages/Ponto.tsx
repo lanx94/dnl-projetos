@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { LogIn, Coffee, Utensils, LogOut, Pause, Play, Pencil, Plus, User as UserIcon } from 'lucide-react'
+import { LogIn, Coffee, Utensils, LogOut, Pause, Play, Pencil, Trash2, Plus, User as UserIcon } from 'lucide-react'
 import { api } from '../lib/api'
 import PageHeader from '../components/ui/PageHeader'
 import { useAuth } from '../contexts/AuthContext'
@@ -52,6 +52,22 @@ export default function PontoPage() {
       setErro(e.message || 'Erro ao bater ponto')
     } finally {
       setCarregando(false)
+    }
+  }
+
+  async function excluirPonto(p: Ponto) {
+    const motivo = window.prompt('Motivo da exclusão deste ponto:')
+    if (motivo === null) return
+    if (!motivo.trim()) {
+      setErro('Informe o motivo da exclusão')
+      return
+    }
+    setErro('')
+    try {
+      await api.pontos.excluir(p.id, motivo.trim())
+      await recarregar()
+    } catch (e: any) {
+      setErro(e.message || 'Erro ao excluir')
     }
   }
 
@@ -238,7 +254,11 @@ export default function PontoPage() {
             </button>
           </div>
         </div>
-        <Timeline estado={estado} onEditar={(p) => setModal({ modo: 'editar', ponto: p })} />
+        <Timeline
+          estado={estado}
+          onEditar={(p) => setModal({ modo: 'editar', ponto: p })}
+          onExcluir={excluirPonto}
+        />
       </div>
 
       {modal && (
@@ -302,10 +322,12 @@ function BotaoPonto({
 
 function Timeline({
   estado,
-  onEditar
+  onEditar,
+  onExcluir
 }: {
   estado: PontosDoDia | null
   onEditar: (p: Ponto) => void
+  onExcluir: (p: Ponto) => void
 }) {
   if (!estado) return <p className="text-ink-500 text-sm">Carregando...</p>
 
@@ -357,14 +379,24 @@ function Timeline({
                 </span>
               )}
             </span>
-            <button
-              type="button"
-              onClick={() => onEditar(e.ponto)}
-              className="opacity-0 group-hover:opacity-100 transition-opacity text-ink-400 hover:text-ink-900"
-              title="Editar este ponto"
-            >
-              <Pencil size={13} />
-            </button>
+            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button
+                type="button"
+                onClick={() => onEditar(e.ponto)}
+                className="text-ink-400 hover:text-ink-900"
+                title="Editar este ponto"
+              >
+                <Pencil size={13} />
+              </button>
+              <button
+                type="button"
+                onClick={() => onExcluir(e.ponto)}
+                className="text-ink-400 hover:text-terra-500"
+                title="Excluir este ponto"
+              >
+                <Trash2 size={13} />
+              </button>
+            </div>
           </div>
         )
       })}

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Calendar, User as UserIcon, Pencil } from 'lucide-react'
+import { Calendar, User as UserIcon, Pencil, Trash2 } from 'lucide-react'
 import { api } from '../lib/api'
 import PageHeader from '../components/ui/PageHeader'
 import { useAuth } from '../contexts/AuthContext'
@@ -31,6 +31,18 @@ export default function RelatorioHorasPage() {
 
   function abrirEdicao(ponto: Ponto | undefined, tipo: TipoPonto, data: string) {
     setModal(ponto ? { modo: 'editar', ponto, tipo, data } : { modo: 'criar', tipo, data })
+  }
+
+  async function excluirPonto(p: Ponto) {
+    const motivo = window.prompt('Motivo da exclusão deste ponto:')
+    if (motivo === null) return
+    if (!motivo.trim()) return
+    try {
+      await api.pontos.excluir(p.id, motivo.trim())
+      await consultar()
+    } catch (e: any) {
+      alert(e.message || 'Erro ao excluir')
+    }
   }
 
   useEffect(() => {
@@ -192,16 +204,16 @@ export default function RelatorioHorasPage() {
                       </span>
                     </Td>
                     <Td>
-                      <HoraEditavel ponto={entrada} tipo="entrada" data={d.data} onEditar={abrirEdicao} />
+                      <HoraEditavel ponto={entrada} tipo="entrada" data={d.data} onEditar={abrirEdicao} onExcluir={excluirPonto} />
                     </Td>
                     <Td>
-                      <HoraEditavel ponto={almIni} tipo="almoco_inicio" data={d.data} onEditar={abrirEdicao} />
+                      <HoraEditavel ponto={almIni} tipo="almoco_inicio" data={d.data} onEditar={abrirEdicao} onExcluir={excluirPonto} />
                     </Td>
                     <Td>
-                      <HoraEditavel ponto={almFim} tipo="almoco_fim" data={d.data} onEditar={abrirEdicao} />
+                      <HoraEditavel ponto={almFim} tipo="almoco_fim" data={d.data} onEditar={abrirEdicao} onExcluir={excluirPonto} />
                     </Td>
                     <Td>
-                      <HoraEditavel ponto={saida} tipo="saida" data={d.data} onEditar={abrirEdicao} />
+                      <HoraEditavel ponto={saida} tipo="saida" data={d.data} onEditar={abrirEdicao} onExcluir={excluirPonto} />
                     </Td>
                     <Td align="right">
                       <span className="font-mono text-xs text-ink-500">{d.total_paradas}</span>
@@ -295,12 +307,14 @@ function HoraEditavel({
   ponto,
   tipo,
   data,
-  onEditar
+  onEditar,
+  onExcluir
 }: {
   ponto?: Ponto
   tipo: TipoPonto
   data: string
   onEditar: (ponto: Ponto | undefined, tipo: TipoPonto, data: string) => void
+  onExcluir: (ponto: Ponto) => void
 }) {
   return (
     <div className="flex items-center gap-1.5 group">
@@ -314,14 +328,26 @@ function HoraEditavel({
       ) : (
         <span className="text-ink-300">—</span>
       )}
-      <button
-        type="button"
-        onClick={() => onEditar(ponto, tipo, data)}
-        className="opacity-0 group-hover:opacity-100 transition-opacity text-ink-400 hover:text-ink-900"
-        title={ponto ? 'Editar este ponto' : 'Registrar ponto esquecido'}
-      >
-        <Pencil size={12} />
-      </button>
+      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <button
+          type="button"
+          onClick={() => onEditar(ponto, tipo, data)}
+          className="text-ink-400 hover:text-ink-900"
+          title={ponto ? 'Editar este ponto' : 'Registrar ponto esquecido'}
+        >
+          <Pencil size={12} />
+        </button>
+        {ponto && (
+          <button
+            type="button"
+            onClick={() => onExcluir(ponto)}
+            className="text-ink-400 hover:text-terra-500"
+            title="Excluir este ponto"
+          >
+            <Trash2 size={12} />
+          </button>
+        )}
+      </div>
     </div>
   )
 }
