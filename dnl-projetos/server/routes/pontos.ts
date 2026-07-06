@@ -6,6 +6,14 @@ const router = Router()
 
 const TIPOS_VALIDOS: TipoPonto[] = ['entrada', 'almoco_inicio', 'almoco_fim', 'saida', 'parada_inicio', 'parada_fim']
 const TIPOS_UNICOS: TipoPonto[] = ['entrada', 'almoco_inicio', 'almoco_fim', 'saida']
+const ROTULOS_TIPO: Record<TipoPonto, string> = {
+  entrada: 'Entrada',
+  almoco_inicio: 'Almoço',
+  almoco_fim: 'Volta do almoço',
+  saida: 'Saída',
+  parada_inicio: 'Parada extra',
+  parada_fim: 'Retomada'
+}
 
 function todayBounds() {
   const now = new Date()
@@ -188,8 +196,9 @@ router.post('/manual', (req, res) => {
     const db = getDatabase()
     const { data, start, end } = dayBoundsFromTimestamp(timestampCompleto)
     const doDia = db.prepare('SELECT * FROM pontos WHERE usuario_id = ? AND timestamp BETWEEN ? AND ?').all(usuarioId, start, end) as Ponto[]
-    if (TIPOS_UNICOS.includes(tipo) && doDia.some((p) => p.tipo === tipo)) {
-      throw new Error(`Já existe um registro de "${tipo}" em ${data}`)
+    const existente = doDia.find((p) => p.tipo === tipo)
+    if (TIPOS_UNICOS.includes(tipo) && existente) {
+      throw new Error(`Já existe um registro de "${ROTULOS_TIPO[tipo]}" em ${data}. Edite-o na linha do tempo (ícone de lápis) em vez de criar um novo.`)
     }
 
     const result = db.prepare(

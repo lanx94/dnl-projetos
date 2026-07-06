@@ -266,6 +266,7 @@ export default function PontoPage() {
         <ModalPonto
           modo={modal.modo}
           ponto={modal.ponto}
+          estado={estado}
           usuarioId={usuarioAlvo ? Number(usuarioAlvo) : undefined}
           onFechar={() => setModal(null)}
           onSalvo={() => {
@@ -392,21 +393,33 @@ function Timeline({
   )
 }
 
+const TIPOS_UNICOS: TipoPonto[] = ['entrada', 'almoco_inicio', 'almoco_fim', 'saida']
+
+function primeiroTipoFaltante(estado?: PontosDoDia | null): TipoPonto {
+  if (!estado) return 'entrada'
+  for (const t of TIPOS_UNICOS) {
+    if (!estado[t as keyof PontosDoDia]) return t
+  }
+  return 'entrada'
+}
+
 function ModalPonto({
   modo,
   ponto,
+  estado,
   usuarioId,
   onFechar,
   onSalvo
 }: {
   modo: 'criar' | 'editar'
   ponto?: Ponto
+  estado?: PontosDoDia | null
   usuarioId?: number
   onFechar: () => void
   onSalvo: () => void
 }) {
   const iniciais = paraInputs(ponto?.timestamp)
-  const [tipo, setTipo] = useState<TipoPonto>(ponto?.tipo || 'entrada')
+  const [tipo, setTipo] = useState<TipoPonto>(ponto?.tipo || primeiroTipoFaltante(estado))
   const [data, setData] = useState(iniciais.data)
   const [hora, setHora] = useState(iniciais.hora)
   const [motivo, setMotivo] = useState('')
