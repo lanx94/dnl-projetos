@@ -1,3 +1,9 @@
+// Fixa o fuso horário do processo em Brasília, independente do TZ configurado
+// no servidor (instâncias AWS costumam vir em UTC por padrão), já que o
+// SQLite (datetime('now','localtime')) e o Date nativo do Node seguem o TZ
+// do sistema/processo.
+process.env.TZ = 'America/Sao_Paulo'
+
 import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
