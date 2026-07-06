@@ -1,5 +1,5 @@
 import { useEffect, useState, FormEvent } from 'react'
-import { Plus, X, Edit2, Trash2, Eye, ArrowLeft, Printer, RotateCcw, Sparkles, FileText } from 'lucide-react'
+import { Plus, X, Edit2, Trash2, Eye, ArrowLeft, Printer, RotateCcw, Sparkles, FileText, GripVertical } from 'lucide-react'
 import { api } from '../lib/api'
 import PageHeader from '../components/ui/PageHeader'
 import type {
@@ -16,10 +16,10 @@ import logoDNL from '../assets/logo-dnl.png'
 
 const FONTE_CONTRATO = "'Arial', 'Helvetica', sans-serif"
 
-// Divide o texto e envolve CONTRATANTE/CONTRATADA/CONTRATADO em <strong>
+// Divide o texto e envolve CONTRATANTE/CONTRATADA/CONTRATADO/DNL PROJETOS em <strong>
 function negritarTermos(texto: string): React.ReactNode[] {
   return texto.split(REGEX_TERMOS_PARTES).map((parte, i) =>
-    /^(CONTRATANTES?|CONTRATADAS?|CONTRATADOS?)$/.test(parte)
+    /^(CONTRATANTES?|CONTRATADAS?|CONTRATADOS?|DNL PROJETOS)$/.test(parte)
       ? <strong key={i}>{parte}</strong>
       : parte
   )
@@ -31,14 +31,20 @@ function up(s?: string | null): string {
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
-function buildContratadaDefault(cfg: Record<string, string>): string {
-  const partes: string[] = []
-  if (cfg.empresa_nome) partes.push(cfg.empresa_nome.toUpperCase())
-  if (cfg.empresa_cnpj) partes.push(`pessoa jurídica de direito privado, inscrita no CNPJ sob o nº ${cfg.empresa_cnpj}`)
-  if (cfg.empresa_endereco) partes.push(`com sede na ${cfg.empresa_endereco}`)
-  if (cfg.empresa_responsavel) partes.push(`representada neste ato por ${cfg.empresa_responsavel}`)
-  return partes.join(', ')
+const CONTRATADA_PADRAO =
+  'DNL PROJETOS, pessoa jurídica de direito privado, inscrita no CNPJ nº 51.212.533/0001-78, ' +
+  'com sede na Rua Das Margaridas dos Campos, 45, bairro: Jardim Camargo novo, Itaim paulista, SP, ' +
+  'CEP:08141-710, celular: (11) 93210-5096, neste ato representado por seu sócio Lucas Cardoso da Silva, ' +
+  'engenheiro civil, brasileiro, solteiro e inscrito no CREA-SP nº5070747868.'
+
+function buildContratadaDefault(): string {
+  return CONTRATADA_PADRAO
 }
+
+const TEXTO_CELEBRACAO =
+  'Celebram o presente contrato de prestação de serviços, sem qualquer vínculo trabalhista ou ' +
+  'societário, que se regerá pelas cláusulas seguintes e, no que for omisso, pela Lei: 10.406/2002 ' +
+  '(Código Civil Brasileiro).'
 
 const STATUS_LABEL: Record<StatusContrato, string> = {
   rascunho: 'Rascunho',
@@ -343,7 +349,7 @@ function ContratoView({
   async function gerarWord() {
     const numeros = calcularNumeros(contrato.clausulas)
 
-    const contratadaText = negritarTermosHtml(contrato.contratada_qualificacao || buildContratadaDefault(config))
+    const contratadaText = negritarTermosHtml(contrato.contratada_qualificacao || buildContratadaDefault())
 
     let contratanteText = ''
     if (contrato.cliente_tipo_pessoa === 'juridica') {
@@ -433,7 +439,7 @@ function ContratoView({
   <p style="margin-bottom:14px;">Pelo presente instrumento particular, as partes a seguir identificadas:</p>
   <p style="margin-bottom:14px;"><strong>CONTRATADA:</strong> ${contratadaText}, doravante denominada simplesmente <strong>CONTRATADA</strong>.</p>
   <p style="margin-bottom:14px;"><strong>CONTRATANTE:</strong> ${contratanteText}, doravante denominado(a) simplesmente <strong>CONTRATANTE</strong>.</p>
-  <p style="font-style:italic;color:#555;">Celebram, entre si, o presente Contrato de Prestação de Serviços, que se regerá pelas cláusulas e condições a seguir estipuladas, bem como pelas disposições do Código Civil Brasileiro (Lei nº 10.406/2002), no que couber.</p>
+  <p style="font-style:italic;color:#555;">${TEXTO_CELEBRACAO}</p>
 </div>
 ${clausulasHtml}
 <p style="text-align:center;font-style:italic;color:#555;margin-top:40px;margin-bottom:28px;font-size:12pt;">${contrato.cidade}, ${contrato.data_assinatura ? fmtDataBR(contrato.data_assinatura) : '___ de ___________________ de ______'}.</p>
@@ -461,14 +467,12 @@ ${clausulasHtml}
       <div style="height:60px;"></div>
       <div style="border-top:1pt solid #888;padding-top:8px;">
         <p style="font-family:Arial,sans-serif;font-size:9pt;text-transform:uppercase;letter-spacing:2px;color:#666;margin:0;">Testemunha 1</p>
-        <p style="font-family:Arial,sans-serif;font-size:9pt;color:#aaa;margin:4px 0 0;">CPF: ___.___.___-__</p>
       </div>
     </td>
     <td style="width:50%;text-align:center;padding:0 40px;">
       <div style="height:60px;"></div>
       <div style="border-top:1pt solid #888;padding-top:8px;">
         <p style="font-family:Arial,sans-serif;font-size:9pt;text-transform:uppercase;letter-spacing:2px;color:#666;margin:0;">Testemunha 2</p>
-        <p style="font-family:Arial,sans-serif;font-size:9pt;color:#aaa;margin:4px 0 0;">CPF: ___.___.___-__</p>
       </div>
     </td>
   </tr>
@@ -599,7 +603,7 @@ ${contrato.observacoes ? `<div style="margin-top:32px;padding-top:16px;border-to
 
           <p className="mb-5">
             <strong className="text-ink-900">CONTRATADA:</strong>{' '}
-            {negritarTermos(contrato.contratada_qualificacao || buildContratadaDefault(config))},
+            {negritarTermos(contrato.contratada_qualificacao || buildContratadaDefault())},
             doravante denominada simplesmente <strong>CONTRATADA</strong>.
           </p>
 
@@ -638,11 +642,7 @@ ${contrato.observacoes ? `<div style="margin-top:32px;padding-top:16px;border-to
             , doravante denominado(a) simplesmente <strong>CONTRATANTE</strong>.
           </p>
 
-          <p className="italic text-ink-600">
-            Celebram, entre si, o presente Contrato de Prestação de Serviços, que se regerá pelas
-            cláusulas e condições a seguir estipuladas, bem como pelas disposições do Código Civil
-            Brasileiro (Lei nº 10.406/2002), no que couber.
-          </p>
+          <p className="italic text-ink-600">{TEXTO_CELEBRACAO}</p>
         </div>
 
         {/* CLÁUSULAS */}
@@ -711,7 +711,6 @@ ${contrato.observacoes ? `<div style="margin-top:32px;padding-top:16px;border-to
               <div className="h-20" />
               <div className="border-t border-ink-400 pt-3">
                 <p style={{ fontFamily: 'sans-serif' }} className="text-[10px] uppercase tracking-wider text-ink-500">{s}</p>
-                <p style={{ fontFamily: 'sans-serif' }} className="text-[10px] text-ink-400 mt-1">CPF: ___.___.___-__</p>
               </div>
             </div>
           ))}
@@ -788,6 +787,7 @@ function ModalContrato({
   const [aba, setAba] = useState<'dados' | 'contratada' | 'pagamento' | 'clausulas' | 'preview'>('dados')
   const [erro, setErro] = useState('')
   const [salvando, setSalvando] = useState(false)
+  const [arrastandoId, setArrastandoId] = useState<string | null>(null)
 
   // ── Efeitos ───────────────────────────────────────────────────────────────
 
@@ -799,7 +799,7 @@ function ModalContrato({
         setProjetos(ps)
         setConfig(cfg)
         if (!ehEdicao && !contrato?.contratada_qualificacao) {
-          setContratadaQualificacao(buildContratadaDefault(cfg))
+          setContratadaQualificacao(buildContratadaDefault())
         }
       })
   }, [])
@@ -853,6 +853,7 @@ function ModalContrato({
   const valorNum = parseFloat(valor.replace(',', '.')) || 0
   const clienteSel = clientes.find(c => c.id === Number(clienteId))
   const numClausulasAtivas = clausulas.filter(c => c.incluida).length
+  const secoesExistentes = Array.from(new Set(clausulas.map(c => c.secao))).sort()
 
   const ctx = {
     numeros: calcularNumeros(clausulas),
@@ -909,6 +910,20 @@ function ModalContrato({
   }
   function editarMetaClausula(id: string, campo: 'rotulo' | 'secao', valor: string) {
     setClausulas(cls => cls.map(c => c.id === id ? { ...c, [campo]: valor } : c))
+  }
+  // Move a clausula "origemId" para a posicao de "destinoId" (arrastar-e-soltar)
+  // e renumera todo mundo em sequencia, na nova ordem visual.
+  function reordenarClausula(origemId: string, destinoId: string) {
+    if (origemId === destinoId) return
+    setClausulas(cls => {
+      const ordenadas = [...cls].sort((a, b) => a.ordem - b.ordem)
+      const origemIdx = ordenadas.findIndex(c => c.id === origemId)
+      const destinoIdx = ordenadas.findIndex(c => c.id === destinoId)
+      if (origemIdx === -1 || destinoIdx === -1) return cls
+      const [movida] = ordenadas.splice(origemIdx, 1)
+      ordenadas.splice(destinoIdx, 0, movida)
+      return ordenadas.map((c, i) => ({ ...c, ordem: i }))
+    })
   }
 
   // ── Handlers de serviços ──────────────────────────────────────────────────
@@ -1276,7 +1291,7 @@ function ModalContrato({
               </div>
               <button
                 type="button"
-                onClick={() => setContratadaQualificacao(buildContratadaDefault(config))}
+                onClick={() => setContratadaQualificacao(buildContratadaDefault())}
                 className="text-xs text-terra-500 hover:text-terra-700 flex items-center gap-1"
               >
                 <RotateCcw size={11} /> Restaurar padrão
@@ -1395,18 +1410,28 @@ function ModalContrato({
                   Selecione pelo menos um tipo de serviço para carregar as cláusulas.
                 </p>
               ) : (
-                [...clausulas].sort((a, b) => a.ordem - b.ordem).map(c => (
-                  <ClausulaEditor
-                    key={c.id}
-                    clausula={c}
-                    numero={ctx.numeros[c.id]}
-                    onToggle={() => toggleClausula(c.id)}
-                    onEditar={txt => editarTextoClausula(c.id, txt)}
-                    onRestaurar={() => restaurarClausula(c.id)}
-                    onRemover={c.id.startsWith('custom_') ? () => removerClausula(c.id) : undefined}
-                    onEditarMeta={c.id.startsWith('custom_') ? (campo, valor) => editarMetaClausula(c.id, campo, valor) : undefined}
-                  />
-                ))
+                <>
+                  <p className="text-[11px] text-ink-400 flex items-center gap-1.5">
+                    <GripVertical size={11} /> Arraste pelo ícone para reordenar — a numeração se ajusta sozinha.
+                  </p>
+                  {[...clausulas].sort((a, b) => a.ordem - b.ordem).map(c => (
+                    <ClausulaEditor
+                      key={c.id}
+                      clausula={c}
+                      numero={ctx.numeros[c.id]}
+                      secoesExistentes={secoesExistentes}
+                      arrastando={arrastandoId === c.id}
+                      onToggle={() => toggleClausula(c.id)}
+                      onEditar={txt => editarTextoClausula(c.id, txt)}
+                      onRestaurar={() => restaurarClausula(c.id)}
+                      onRemover={c.id.startsWith('custom_') ? () => removerClausula(c.id) : undefined}
+                      onEditarMeta={c.id.startsWith('custom_') ? (campo, valor) => editarMetaClausula(c.id, campo, valor) : undefined}
+                      onDragStart={() => setArrastandoId(c.id)}
+                      onDragEnd={() => setArrastandoId(null)}
+                      onDropSobre={() => { if (arrastandoId) reordenarClausula(arrastandoId, c.id) }}
+                    />
+                  ))}
+                </>
               )}
             </div>
           )}
@@ -1438,7 +1463,7 @@ function ModalContrato({
                 </div>
 
                 <p className="text-[12px] mb-3 text-justify leading-relaxed text-ink-800">
-                  <strong>CONTRATADA:</strong> {negritarTermos(contratadaQualificacao || buildContratadaDefault(config))}.
+                  <strong>CONTRATADA:</strong> {negritarTermos(contratadaQualificacao || buildContratadaDefault())}.
                 </p>
                 <p className="text-[12px] mb-6 text-justify leading-relaxed text-ink-800">
                   <strong>CONTRATANTE:</strong>{' '}
@@ -1503,25 +1528,45 @@ function ModalContrato({
 // ─── Editor de cláusula individual ───────────────────────────────────────────
 
 function ClausulaEditor({
-  clausula, numero, onToggle, onEditar, onRestaurar, onRemover, onEditarMeta,
+  clausula, numero, secoesExistentes, arrastando, onToggle, onEditar, onRestaurar, onRemover, onEditarMeta,
+  onDragStart, onDragEnd, onDropSobre,
 }: {
   clausula: ClausulaContrato
   numero?: number
+  secoesExistentes: string[]
+  arrastando?: boolean
   onToggle: () => void
   onEditar: (texto: string) => void
   onRestaurar: () => void
   onRemover?: () => void
   onEditarMeta?: (campo: 'rotulo' | 'secao', valor: string) => void
+  onDragStart: () => void
+  onDragEnd: () => void
+  onDropSobre: () => void
 }) {
   const ehCustom = !!onEditarMeta
   const [editando, setEditando] = useState(ehCustom && !clausula.texto)
+  const [novaSecao, setNovaSecao] = useState(false)
   const foiAlterada = !ehCustom && clausula.texto !== clausula.texto_padrao
 
   return (
-    <div className={`border rounded-md transition-colors ${
-      clausula.incluida ? 'border-ink-300/40 bg-cream-50' : 'border-ink-300/25 bg-cream-200/40 opacity-55'
-    }`}>
+    <div
+      draggable
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
+      onDragOver={e => e.preventDefault()}
+      onDrop={e => { e.preventDefault(); onDropSobre() }}
+      className={`border rounded-md transition-colors ${
+        clausula.incluida ? 'border-ink-300/40 bg-cream-50' : 'border-ink-300/25 bg-cream-200/40 opacity-55'
+      } ${arrastando ? 'opacity-40' : ''}`}
+    >
       <div className="flex items-start gap-3 p-3">
+        <span
+          className="pt-0.5 text-ink-300 hover:text-ink-500 cursor-grab active:cursor-grabbing shrink-0"
+          title="Arrastar para reordenar"
+        >
+          <GripVertical size={14} />
+        </span>
         <label className="flex items-center pt-0.5 cursor-pointer">
           <input
             type="checkbox"
@@ -1593,12 +1638,30 @@ function ClausulaEditor({
               </div>
               <div>
                 <label className="label">Seção do contrato</label>
-                <input
-                  className="input-field text-sm"
-                  value={clausula.secao}
-                  onChange={e => onEditarMeta('secao', e.target.value)}
-                  placeholder="Ex: DAS CONDIÇÕES GERAIS"
-                />
+                {novaSecao || !secoesExistentes.includes(clausula.secao) ? (
+                  <input
+                    className="input-field text-sm"
+                    value={clausula.secao}
+                    onChange={e => onEditarMeta('secao', e.target.value)}
+                    placeholder="Ex: DAS CONDIÇÕES GERAIS"
+                    autoFocus={novaSecao}
+                    onBlur={() => { if (!clausula.secao.trim()) setNovaSecao(false) }}
+                  />
+                ) : (
+                  <select
+                    className="input-field text-sm"
+                    value={clausula.secao}
+                    onChange={e => {
+                      if (e.target.value === '__nova__') { setNovaSecao(true); onEditarMeta('secao', '') }
+                      else onEditarMeta('secao', e.target.value)
+                    }}
+                  >
+                    {secoesExistentes.map(s => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                    <option value="__nova__">+ Nova seção...</option>
+                  </select>
+                )}
               </div>
             </div>
           )}
@@ -1609,6 +1672,8 @@ function ClausulaEditor({
           )}
           {editando && (
             <textarea
+              draggable={false}
+              onMouseDown={e => e.stopPropagation()}
               className="input-field font-mono text-xs mt-2 min-h-[120px]"
               value={clausula.texto}
               onChange={e => onEditar(e.target.value)}

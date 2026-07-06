@@ -262,7 +262,7 @@ export function substituirVars(texto: string, ctx: ContextoSubstituicao): string
 // Negrito automático nos termos das partes
 // =========================================================
 
-export const REGEX_TERMOS_PARTES = /\b(CONTRATANTES?|CONTRATADAS?|CONTRATADOS?)\b/g
+export const REGEX_TERMOS_PARTES = /\b(CONTRATANTES?|CONTRATADAS?|CONTRATADOS?|DNL PROJETOS)\b/g
 
 export function negritarTermosHtml(texto: string): string {
   return texto.replace(REGEX_TERMOS_PARTES, '<strong>$1</strong>')
