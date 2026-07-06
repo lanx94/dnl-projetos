@@ -213,26 +213,29 @@ function ModalCliente({
     setErro('')
     setSalvando(true)
     try {
+      // Enviamos '' (não undefined) para campos vazios: o JSON.stringify remove
+      // chaves undefined, o que impediria apagar um valor já salvo na edição.
+      // O backend converte '' em NULL, então campos limpos são de fato apagados.
       const dados: Partial<Cliente> = {
         tipo_pessoa: tipoPessoa,
         nome,
-        cnpj: tipoPessoa === 'juridica' ? cnpj || undefined : undefined,
+        cnpj: tipoPessoa === 'juridica' ? cnpj || '' : '',
         inscricao_estadual:
-          tipoPessoa === 'juridica' ? inscricaoEstadual || undefined : undefined,
-        cpf: tipoPessoa === 'fisica' ? cpfCliente || undefined : undefined,
-        rg: tipoPessoa === 'fisica' ? rgCliente || undefined : undefined,
-        email: email || undefined,
-        telefone: telefone || undefined,
-        endereco: endereco || undefined,
-        contato_responsavel: contato || undefined,
-        observacoes: obs || undefined,
-        representante_nome: repNome || undefined,
-        representante_nacionalidade: repNacion || undefined,
-        representante_naturalidade: repNatural || undefined,
-        representante_estado_civil: repEstado || undefined,
-        representante_profissao: repProfissao || undefined,
-        representante_rg: repRg || undefined,
-        representante_cpf: repCpf || undefined
+          tipoPessoa === 'juridica' ? inscricaoEstadual || '' : '',
+        cpf: tipoPessoa === 'fisica' ? cpfCliente || '' : '',
+        rg: tipoPessoa === 'fisica' ? rgCliente || '' : '',
+        email: email || '',
+        telefone: telefone || '',
+        endereco: endereco || '',
+        contato_responsavel: contato || '',
+        observacoes: obs || '',
+        representante_nome: repNome || '',
+        representante_nacionalidade: repNacion || '',
+        representante_naturalidade: repNatural || '',
+        representante_estado_civil: repEstado || '',
+        representante_profissao: repProfissao || '',
+        representante_rg: repRg || '',
+        representante_cpf: repCpf || ''
       }
       if (ehEdicao) {
         await api.clientes.atualizar(cliente.id, dados as any)
