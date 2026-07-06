@@ -1,9 +1,9 @@
 import { useEffect, useState, FormEvent } from 'react'
-import { Plus, X, Trash2, Megaphone, Calendar, User as UserIcon, MessageCircle, Cake } from 'lucide-react'
+import { Plus, X, Trash2, Megaphone, Calendar, User as UserIcon, MessageCircle, Cake, Users } from 'lucide-react'
 import { api } from '../lib/api'
 import PageHeader from '../components/ui/PageHeader'
 import { useAuth } from '../contexts/AuthContext'
-import type { Evento, TipoEvento } from '@shared/types'
+import type { Evento, TipoEvento, User } from '@shared/types'
 
 const TIPO_LABEL: Record<TipoEvento, string> = {
   aviso: 'Aviso',
@@ -27,6 +27,17 @@ const TIPO_COR: Record<TipoEvento, string> = {
   pessoal: 'bg-cream-300 text-ink-700',
   aniversario: 'bg-moss-500/20 text-moss-600',
   reuniao: 'bg-cream-300 text-ink-700'
+}
+
+function resumoDirecionamento(e: Evento): string {
+  const partes: string[] = []
+  if (e.cargos && e.cargos.length > 0) partes.push(e.cargos.join(', '))
+  if (e.destinatarios_nomes && e.destinatarios_nomes.length > 0) {
+    partes.push(e.destinatarios_nomes.join(', '))
+  } else if (e.destinatarios && e.destinatarios.length > 0) {
+    partes.push(`${e.destinatarios.length} funcionário(s)`)
+  }
+  return partes.join(' · ')
 }
 
 export default function FeedPage() {
@@ -75,10 +86,11 @@ export default function FeedPage() {
           {eventos.map((e) => {
             const Icon = TIPO_ICONE[e.tipo]
             const podeDeletar = e.autor_id === user?.id || user?.role === 'admin'
+            const direcionado = (e.destinatarios?.length || 0) > 0 || (e.cargos?.length || 0) > 0
             return (
               <div key={e.id} className="card p-6 fade-in">
                 <div className="flex items-start justify-between gap-4 mb-3">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 flex-wrap">
                     <span
                       className={`flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-widest px-2 py-1 rounded
                         ${TIPO_COR[e.tipo]}`}
@@ -89,6 +101,13 @@ export default function FeedPage() {
                     {e.global ? (
                       <span className="text-[10px] font-mono uppercase tracking-widest text-terra-500">
                         ● Global
+                      </span>
+                    ) : direcionado ? (
+                      <span
+                        className="flex items-center gap-1 text-[10px] font-mono uppercase tracking-widest text-moss-600"
+                        title={resumoDirecionamento(e)}
+                      >
+                        <Users size={11} /> Direcionado
                       </span>
                     ) : (
                       <span className="text-[10px] font-mono uppercase tracking-widest text-ink-400">
@@ -111,6 +130,13 @@ export default function FeedPage() {
                   {e.titulo}
                 </h3>
                 <p className="text-sm text-ink-700 whitespace-pre-line mb-4">{e.conteudo}</p>
+
+                {direcionado && (
+                  <p className="text-xs text-ink-500 mb-3 flex items-center gap-1.5">
+                    <Users size={11} className="text-moss-600 shrink-0" />
+                    Para: {resumoDirecionamento(e)}
+                  </p>
+                )}
 
                 <div className="flex items-center gap-3 pt-3 border-t border-ink-300/30 text-xs text-ink-500">
                   <span>Por {e.autor_nome}</span>
@@ -172,6 +198,26 @@ function ModalNovoEvento({
   const [erro, setErro] = useState('')
   const [salvando, setSalvando] = useState(false)
 
+  // Direcionamento (admin/RH)
+  const [usuarios, setUsuarios] = useState<User[]>([])
+  const [destinatarios, setDestinatarios] = useState<number[]>([])
+  const [cargosSelecionados, setCargosSelecionados] = useState<string[]>([])
+
+  useEffect(() => {
+    if (ehAdminOuRH) api.usuarios.listar().then((us) => setUsuarios(us as User[]))
+  }, [ehAdminOuRH])
+
+  const cargosDisponiveis = Array.from(
+    new Set(usuarios.map((u) => u.cargo).filter((c): c is string => !!c))
+  ).sort()
+
+  function toggleDestinatario(id: number) {
+    setDestinatarios((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id])
+  }
+  function toggleCargo(cargo: string) {
+    setCargosSelecionados((prev) => prev.includes(cargo) ? prev.filter((c) => c !== cargo) : [...prev, cargo])
+  }
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setErro('')
@@ -182,7 +228,9 @@ function ModalNovoEvento({
         titulo,
         conteudo,
         global: ehAdminOuRH ? global : false,
-        data_evento: dataEvento || undefined
+        data_evento: dataEvento || undefined,
+        destinatarios: ehAdminOuRH && !global ? destinatarios : undefined,
+        cargos: ehAdminOuRH && !global ? cargosSelecionados : undefined
       })
       onCriado()
     } catch (err: any) {
@@ -262,18 +310,84 @@ function ModalNovoEvento({
           </div>
 
           {ehAdminOuRH && (
-            <div className="flex items-center gap-2 p-4 bg-cream-200/50 rounded-md border border-ink-300/40">
-              <input
-                type="checkbox"
-                id="global"
-                checked={global}
-                onChange={(e) => setGlobal(e.target.checked)}
-                className="accent-ink-900"
-              />
-              <label htmlFor="global" className="text-sm text-ink-700 cursor-pointer">
-                <strong>Evento global</strong> — todos os funcionários verão no mural
-              </label>
-            </div>
+            <>
+              <div className="flex items-center gap-2 p-4 bg-cream-200/50 rounded-md border border-ink-300/40">
+                <input
+                  type="checkbox"
+                  id="global"
+                  checked={global}
+                  onChange={(e) => setGlobal(e.target.checked)}
+                  className="accent-ink-900"
+                />
+                <label htmlFor="global" className="text-sm text-ink-700 cursor-pointer">
+                  <strong>Evento global</strong> — todos os funcionários verão no mural
+                </label>
+              </div>
+
+              {!global && (
+                <div className="p-4 bg-cream-200/50 rounded-md border border-ink-300/40 space-y-4">
+                  <p className="text-sm text-ink-700 flex items-center gap-1.5">
+                    <Users size={13} className="text-moss-600" />
+                    <strong>Direcionar post</strong> — só quem for selecionado (e você) verá
+                  </p>
+
+                  {cargosDisponiveis.length > 0 && (
+                    <div>
+                      <label className="label">Setores (cargo)</label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {cargosDisponiveis.map((cargo) => {
+                          const on = cargosSelecionados.includes(cargo)
+                          return (
+                            <button
+                              key={cargo}
+                              type="button"
+                              onClick={() => toggleCargo(cargo)}
+                              className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                                on
+                                  ? 'border-moss-600 bg-moss-500/15 text-moss-600 font-medium'
+                                  : 'border-ink-300 text-ink-600 hover:border-ink-500'
+                              }`}
+                            >
+                              {cargo}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="label">Funcionários</label>
+                    <div className="max-h-40 overflow-y-auto space-y-1 pr-1">
+                      {usuarios.map((u) => {
+                        const on = destinatarios.includes(u.id)
+                        return (
+                          <label
+                            key={u.id}
+                            className="flex items-center gap-2 text-sm text-ink-700 cursor-pointer px-2 py-1 rounded hover:bg-cream-200"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={on}
+                              onChange={() => toggleDestinatario(u.id)}
+                              className="accent-moss-600"
+                            />
+                            <span>{u.nome}</span>
+                            {u.cargo && <span className="text-xs text-ink-400">— {u.cargo}</span>}
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {destinatarios.length === 0 && cargosSelecionados.length === 0 && (
+                    <p className="text-xs text-ink-500">
+                      Sem seleção, o post fica <strong>pessoal</strong> (só você vê).
+                    </p>
+                  )}
+                </div>
+              )}
+            </>
           )}
 
           {erro && (

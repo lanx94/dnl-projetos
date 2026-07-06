@@ -58,6 +58,10 @@ export interface Ponto {
   tipo: TipoPonto
   timestamp: string
   observacao?: string
+  editado_por?: number
+  editado_em?: string
+  motivo_edicao?: string
+  origem?: 'bater' | 'manual'
 }
 
 export interface PontosDoDia {
@@ -149,6 +153,10 @@ export interface Cronometro {
   fim?: string
   duracao_segundos?: number
   observacao?: string
+  editado_por?: number
+  editado_em?: string
+  motivo_edicao?: string
+  origem?: 'timer' | 'manual'
 }
 
 export interface RelatorioDiario {
@@ -191,6 +199,9 @@ export interface Evento {
   global: boolean
   data_evento?: string
   criado_em: string
+  destinatarios?: number[]
+  cargos?: string[]
+  destinatarios_nomes?: string[]
 }
 
 export interface EventoCreateInput {
@@ -199,6 +210,8 @@ export interface EventoCreateInput {
   conteudo: string
   global?: boolean
   data_evento?: string
+  destinatarios?: number[]
+  cargos?: string[]
 }
 
 export type TipoLancamento = 'receita' | 'despesa'
@@ -689,7 +702,9 @@ export type StatusRevisao = 'pendente' | 'em_andamento' | 'concluida'
 
 export interface RevisaoProjeto {
   id: number
+  projeto_id?: number
   nome_projeto: string
+  cliente_nome?: string
   revisao: string
   descricao?: string
   data_revisao?: string
@@ -703,7 +718,8 @@ export interface RevisaoProjeto {
 }
 
 export interface RevisaoCreateInput {
-  nome_projeto: string
+  projeto_id?: number
+  nome_projeto?: string
   revisao: string
   descricao?: string
   data_revisao?: string

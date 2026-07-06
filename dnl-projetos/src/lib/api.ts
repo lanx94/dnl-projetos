@@ -48,7 +48,7 @@ async function req<T>(method: string, path: string, body?: unknown): Promise<T> 
 const get = <T>(path: string) => req<T>('GET', path)
 const post = <T>(path: string, body?: unknown) => req<T>('POST', path, body)
 const put = <T>(path: string, body?: unknown) => req<T>('PUT', path, body)
-const del = <T>(path: string) => req<T>('DELETE', path)
+const del = <T>(path: string, body?: unknown) => req<T>('DELETE', path, body)
 
 // ── Download helper ────────────────────────────────────────────────────────────
 
@@ -91,8 +91,11 @@ export const api = {
 
   pontos: {
     bater: (tipo: TipoPonto, observacao?: string) => post<Ponto>('/pontos/bater', { tipo, observacao }),
-    listarHoje: () => get<PontosDoDia>('/pontos/hoje'),
-    listarPorPeriodo: (inicio: string, fim: string) => get<Ponto[]>(`/pontos/periodo?inicio=${inicio}&fim=${fim}`)
+    listarHoje: (usuario_id?: number) => get<PontosDoDia>(`/pontos/hoje${usuario_id ? `?usuario_id=${usuario_id}` : ''}`),
+    listarPorPeriodo: (inicio: string, fim: string, usuario_id?: number) => get<Ponto[]>(`/pontos/periodo?inicio=${inicio}&fim=${fim}${usuario_id ? `&usuario_id=${usuario_id}` : ''}`),
+    criarManual: (input: { tipo: TipoPonto; timestamp: string; motivo: string; usuario_id?: number }) => post<Ponto>('/pontos/manual', input),
+    corrigir: (id: number, timestamp: string, motivo: string) => put<Ponto>(`/pontos/${id}`, { timestamp, motivo }),
+    excluir: (id: number, motivo: string) => del<{ success: boolean }>(`/pontos/${id}`, { motivo })
   },
 
   projetos: {
@@ -115,8 +118,18 @@ export const api = {
   cronometro: {
     iniciar: (projeto_id: number, observacao?: string) => post<Cronometro>('/cronometro/iniciar', { projeto_id, observacao }),
     parar: (id: number) => post<Cronometro>(`/cronometro/parar/${id}`),
-    ativo: () => get<Cronometro | null>('/cronometro/ativo'),
-    historico: (limit?: number) => get<Cronometro[]>(limit ? `/cronometro/historico?limit=${limit}` : '/cronometro/historico')
+    ativo: (usuario_id?: number) => get<Cronometro | null>(`/cronometro/ativo${usuario_id ? `?usuario_id=${usuario_id}` : ''}`),
+    historico: (limit?: number, usuario_id?: number) => {
+      const params = new URLSearchParams()
+      if (limit) params.set('limit', String(limit))
+      if (usuario_id) params.set('usuario_id', String(usuario_id))
+      const qs = params.toString()
+      return get<Cronometro[]>(`/cronometro/historico${qs ? `?${qs}` : ''}`)
+    },
+    criarManual: (input: { projeto_id: number; inicio: string; fim: string; motivo: string; observacao?: string; usuario_id?: number }) =>
+      post<Cronometro>('/cronometro/manual', input),
+    corrigir: (id: number, input: { inicio?: string; fim?: string; motivo: string }) => put<Cronometro>(`/cronometro/${id}`, input),
+    excluir: (id: number, motivo: string) => del<{ success: boolean }>(`/cronometro/${id}`, { motivo })
   },
 
   relatorios: {

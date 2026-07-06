@@ -4,6 +4,9 @@ import type { Ponto, PontosDoDia, TipoPonto } from '../../shared/types'
 
 const router = Router()
 
+const TIPOS_VALIDOS: TipoPonto[] = ['entrada', 'almoco_inicio', 'almoco_fim', 'saida', 'parada_inicio', 'parada_fim']
+const TIPOS_UNICOS: TipoPonto[] = ['entrada', 'almoco_inicio', 'almoco_fim', 'saida']
+
 function todayBounds() {
   const now = new Date()
   const pad = (n: number) => String(n).padStart(2, '0')
@@ -14,6 +17,12 @@ function todayBounds() {
     start: `${y}-${m}-${d} 00:00:00`,
     end: `${y}-${m}-${d} 23:59:59`
   }
+}
+
+function dayBoundsFromTimestamp(timestamp: string) {
+  const data = timestamp.slice(0, 10)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) throw new Error('Data/hora inválida')
+  return { data, start: `${data} 00:00:00`, end: `${data} 23:59:59` }
 }
 
 function formatarHoras(segundos: number): string {
@@ -41,14 +50,43 @@ function calcularTotalDia(pontos: Ponto[]): string {
   return formatarHoras(Math.max(0, total))
 }
 
+// Admin/RH podem operar em nome de outro usuário (usuario_id vindo de query/body); demais só em si mesmos.
+function resolverUsuarioAlvo(req: any, usuarioIdBruto: unknown): number {
+  const u = req.currentUser
+  const podeOperarOutro = u.role === 'admin' || u.role === 'rh'
+  if (usuarioIdBruto === undefined || usuarioIdBruto === null || usuarioIdBruto === '') return u.id
+  if (!podeOperarOutro) throw new Error('Sem permissão para operar em nome de outro usuário')
+  const id = Number(usuarioIdBruto)
+  if (!Number.isInteger(id) || id <= 0) throw new Error('usuario_id inválido')
+  return id
+}
+
+function registrarAuditoria(
+  db: ReturnType<typeof getDatabase>,
+  args: {
+    pontoId: number | null
+    usuarioId: number
+    editadoPor: number
+    acao: 'criacao_manual' | 'edicao' | 'exclusao'
+    tipo?: string
+    valorAnterior?: string | null
+    valorNovo?: string | null
+    motivo: string
+  }
+) {
+  db.prepare(
+    `INSERT INTO pontos_auditoria (ponto_id, usuario_id, editado_por, acao, tipo, valor_anterior, valor_novo, motivo)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(args.pontoId, args.usuarioId, args.editadoPor, args.acao, args.tipo || null, args.valorAnterior || null, args.valorNovo || null, args.motivo)
+}
+
 // POST /api/pontos/bater
 router.post('/bater', (req, res) => {
   try {
     const u = req.currentUser
     const { tipo, observacao }: { tipo: TipoPonto; observacao?: string } = req.body
 
-    const tiposValidos: TipoPonto[] = ['entrada', 'almoco_inicio', 'almoco_fim', 'saida', 'parada_inicio', 'parada_fim']
-    if (!tiposValidos.includes(tipo)) throw new Error('Tipo de ponto inválido')
+    if (!TIPOS_VALIDOS.includes(tipo)) throw new Error('Tipo de ponto inválido')
     if (observacao && observacao.length > 500) throw new Error('Observação muito longa (máx 500 caracteres)')
 
     const db = getDatabase()
@@ -91,13 +129,13 @@ router.post('/bater', (req, res) => {
   }
 })
 
-// GET /api/pontos/hoje
+// GET /api/pontos/hoje?usuario_id= (admin/rh podem consultar outro usuário)
 router.get('/hoje', (req, res) => {
   try {
-    const u = req.currentUser
+    const usuarioId = resolverUsuarioAlvo(req, req.query.usuario_id)
     const db = getDatabase()
     const { start, end } = todayBounds()
-    const lista = db.prepare('SELECT * FROM pontos WHERE usuario_id = ? AND timestamp BETWEEN ? AND ? ORDER BY timestamp').all(u.id, start, end) as Ponto[]
+    const lista = db.prepare('SELECT * FROM pontos WHERE usuario_id = ? AND timestamp BETWEEN ? AND ? ORDER BY timestamp').all(usuarioId, start, end) as Ponto[]
 
     const result: PontosDoDia = { paradas_extras: [] }
     for (const p of lista) {
@@ -117,20 +155,133 @@ router.get('/hoje', (req, res) => {
     result.total_horas = calcularTotalDia(lista)
     res.json(result)
   } catch (err: any) {
-    res.status(500).json({ error: err.message })
+    res.status(400).json({ error: err.message })
   }
 })
 
-// GET /api/pontos/periodo?inicio=&fim=
+// GET /api/pontos/periodo?inicio=&fim=&usuario_id=
 router.get('/periodo', (req, res) => {
   try {
-    const u = req.currentUser
     const { inicio, fim } = req.query as { inicio: string; fim: string }
+    const usuarioId = resolverUsuarioAlvo(req, req.query.usuario_id)
     const db = getDatabase()
-    const pontos = db.prepare('SELECT * FROM pontos WHERE usuario_id = ? AND timestamp BETWEEN ? AND ? ORDER BY timestamp').all(u.id, inicio, fim) as Ponto[]
+    const pontos = db.prepare('SELECT * FROM pontos WHERE usuario_id = ? AND timestamp BETWEEN ? AND ? ORDER BY timestamp').all(usuarioId, inicio, fim) as Ponto[]
     res.json(pontos)
   } catch (err: any) {
-    res.status(500).json({ error: err.message })
+    res.status(400).json({ error: err.message })
+  }
+})
+
+// POST /api/pontos/manual — cria um ponto retroativo (esqueceu de bater)
+router.post('/manual', (req, res) => {
+  try {
+    const u = req.currentUser
+    const { tipo, timestamp, motivo }: { tipo: TipoPonto; timestamp: string; motivo: string } = req.body
+    const usuarioId = resolverUsuarioAlvo(req, req.body.usuario_id)
+
+    if (!TIPOS_VALIDOS.includes(tipo)) throw new Error('Tipo de ponto inválido')
+    if (!timestamp || !/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}(:\d{2})?$/.test(timestamp)) throw new Error('Data/hora inválida (use AAAA-MM-DD HH:MM)')
+    if (!motivo || !motivo.trim()) throw new Error('Informe o motivo da correção')
+    if (motivo.length > 500) throw new Error('Motivo muito longo (máx 500 caracteres)')
+    const timestampCompleto = timestamp.length === 16 ? `${timestamp}:00` : timestamp
+
+    const db = getDatabase()
+    const { data, start, end } = dayBoundsFromTimestamp(timestampCompleto)
+    const doDia = db.prepare('SELECT * FROM pontos WHERE usuario_id = ? AND timestamp BETWEEN ? AND ?').all(usuarioId, start, end) as Ponto[]
+    if (TIPOS_UNICOS.includes(tipo) && doDia.some((p) => p.tipo === tipo)) {
+      throw new Error(`Já existe um registro de "${tipo}" em ${data}`)
+    }
+
+    const result = db.prepare(
+      `INSERT INTO pontos (usuario_id, tipo, timestamp, observacao, editado_por, editado_em, motivo_edicao, origem)
+       VALUES (?, ?, ?, NULL, ?, datetime('now','localtime'), ?, 'manual')`
+    ).run(usuarioId, tipo, timestampCompleto, u.id, motivo.trim())
+
+    registrarAuditoria(db, {
+      pontoId: Number(result.lastInsertRowid),
+      usuarioId,
+      editadoPor: u.id,
+      acao: 'criacao_manual',
+      tipo,
+      valorNovo: timestampCompleto,
+      motivo: motivo.trim()
+    })
+
+    const ponto = db.prepare('SELECT * FROM pontos WHERE id = ?').get(result.lastInsertRowid) as Ponto
+    res.json(ponto)
+  } catch (err: any) {
+    res.status(400).json({ error: err.message })
+  }
+})
+
+// PUT /api/pontos/:id — corrige o horário de um ponto já batido
+router.put('/:id', (req, res) => {
+  try {
+    const u = req.currentUser
+    const id = Number(req.params.id)
+    const { timestamp, motivo }: { timestamp: string; motivo: string } = req.body
+
+    if (!timestamp || !/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}(:\d{2})?$/.test(timestamp)) throw new Error('Data/hora inválida (use AAAA-MM-DD HH:MM)')
+    if (!motivo || !motivo.trim()) throw new Error('Informe o motivo da correção')
+    if (motivo.length > 500) throw new Error('Motivo muito longo (máx 500 caracteres)')
+    const timestampCompleto = timestamp.length === 16 ? `${timestamp}:00` : timestamp
+
+    const db = getDatabase()
+    const ponto = db.prepare('SELECT * FROM pontos WHERE id = ?').get(id) as Ponto | undefined
+    if (!ponto) throw new Error('Ponto não encontrado')
+    if (ponto.usuario_id !== u.id && u.role !== 'admin' && u.role !== 'rh') throw new Error('Sem permissão para editar este ponto')
+
+    db.prepare(
+      `UPDATE pontos SET timestamp = ?, editado_por = ?, editado_em = datetime('now','localtime'), motivo_edicao = ? WHERE id = ?`
+    ).run(timestampCompleto, u.id, motivo.trim(), id)
+
+    registrarAuditoria(db, {
+      pontoId: id,
+      usuarioId: ponto.usuario_id,
+      editadoPor: u.id,
+      acao: 'edicao',
+      tipo: ponto.tipo,
+      valorAnterior: ponto.timestamp,
+      valorNovo: timestampCompleto,
+      motivo: motivo.trim()
+    })
+
+    const atualizado = db.prepare('SELECT * FROM pontos WHERE id = ?').get(id) as Ponto
+    res.json(atualizado)
+  } catch (err: any) {
+    res.status(400).json({ error: err.message })
+  }
+})
+
+// DELETE /api/pontos/:id — remove um ponto batido por engano
+router.delete('/:id', (req, res) => {
+  try {
+    const u = req.currentUser
+    const id = Number(req.params.id)
+    const { motivo }: { motivo: string } = req.body
+
+    if (!motivo || !motivo.trim()) throw new Error('Informe o motivo da exclusão')
+    if (motivo.length > 500) throw new Error('Motivo muito longo (máx 500 caracteres)')
+
+    const db = getDatabase()
+    const ponto = db.prepare('SELECT * FROM pontos WHERE id = ?').get(id) as Ponto | undefined
+    if (!ponto) throw new Error('Ponto não encontrado')
+    if (ponto.usuario_id !== u.id && u.role !== 'admin' && u.role !== 'rh') throw new Error('Sem permissão para excluir este ponto')
+
+    registrarAuditoria(db, {
+      pontoId: null,
+      usuarioId: ponto.usuario_id,
+      editadoPor: u.id,
+      acao: 'exclusao',
+      tipo: ponto.tipo,
+      valorAnterior: ponto.timestamp,
+      motivo: motivo.trim()
+    })
+
+    db.prepare('DELETE FROM pontos WHERE id = ?').run(id)
+    res.json({ success: true })
+  } catch (err: any) {
+    res.status(400).json({ error: err.message })
   }
 })
 

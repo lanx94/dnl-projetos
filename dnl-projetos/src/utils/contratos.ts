@@ -230,13 +230,13 @@ export function substituirVars(texto: string, ctx: ContextoSubstituicao): string
     .join('\n')
 
   const servicosTexto = (ctx.objeto.servicos || [])
-    .map((s) => `• ${s.descricao}`)
+    .map((s) => `• ${s.descricao.toUpperCase()}`)
     .join('\n')
 
   const vars: Record<string, string> = {
-    '{{contratante_nome}}': ctx.contratante.razao_social || '—',
+    '{{contratante_nome}}': (ctx.contratante.razao_social || '—').toUpperCase(),
     '{{objeto_descricao}}': ctx.objeto.descricao || '—',
-    '{{objeto_endereco}}': ctx.objeto.endereco_imovel || '',
+    '{{objeto_endereco}}': (ctx.objeto.endereco_imovel || '').toUpperCase(),
     '{{valor_numero}}': fmtMoney(ctx.objeto.valor),
     '{{valor_extenso}}': (
       ctx.objeto.valor_extenso || numberToWords(ctx.objeto.valor)
@@ -256,6 +256,16 @@ export function substituirVars(texto: string, ctx: ContextoSubstituicao): string
   }
 
   return out
+}
+
+// =========================================================
+// Negrito automático nos termos das partes
+// =========================================================
+
+export const REGEX_TERMOS_PARTES = /\b(CONTRATANTES?|CONTRATADAS?|CONTRATADOS?)\b/g
+
+export function negritarTermosHtml(texto: string): string {
+  return texto.replace(REGEX_TERMOS_PARTES, '<strong>$1</strong>')
 }
 
 // =========================================================

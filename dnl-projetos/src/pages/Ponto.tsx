@@ -1,18 +1,45 @@
 import { useEffect, useState } from 'react'
-import { LogIn, Coffee, Utensils, LogOut, Pause, Play } from 'lucide-react'
+import { LogIn, Coffee, Utensils, LogOut, Pause, Play, Pencil, Plus, User as UserIcon, X } from 'lucide-react'
 import { api } from '../lib/api'
 import PageHeader from '../components/ui/PageHeader'
-import type { PontosDoDia, TipoPonto, Ponto } from '@shared/types'
+import { useAuth } from '../contexts/AuthContext'
+import type { PontosDoDia, TipoPonto, Ponto, User } from '@shared/types'
+
+const ROTULOS_TIPO: Record<TipoPonto, string> = {
+  entrada: 'Entrada',
+  almoco_inicio: 'Almoço',
+  almoco_fim: 'Volta do almoço',
+  saida: 'Saída',
+  parada_inicio: 'Parada extra',
+  parada_fim: 'Retomada'
+}
 
 function parseSQLiteDate(s: string): Date {
   return new Date(s.replace(' ', 'T'))
 }
 
+function paraInputs(ts?: string): { data: string; hora: string } {
+  const d = ts ? parseSQLiteDate(ts) : new Date()
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return {
+    data: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
+    hora: `${pad(d.getHours())}:${pad(d.getMinutes())}`
+  }
+}
+
 export default function PontoPage() {
+  const { user } = useAuth()
+  const ehAdminOuRH = user?.role === 'admin' || user?.role === 'rh'
+
   const [estado, setEstado] = useState<PontosDoDia | null>(null)
   const [erro, setErro] = useState('')
   const [carregando, setCarregando] = useState(false)
   const [agora, setAgora] = useState(new Date())
+  const [usuarios, setUsuarios] = useState<User[]>([])
+  const [usuarioAlvo, setUsuarioAlvo] = useState<number | ''>('')
+  const [modal, setModal] = useState<{ modo: 'criar' | 'editar'; ponto?: Ponto } | null>(null)
+
+  const souEuMesmo = usuarioAlvo === ''
 
   useEffect(() => {
     const t = setInterval(() => setAgora(new Date()), 1000)
@@ -20,12 +47,16 @@ export default function PontoPage() {
   }, [])
 
   useEffect(() => {
+    if (ehAdminOuRH) api.usuarios.listar().then((us) => setUsuarios(us as User[]))
+  }, [ehAdminOuRH])
+
+  useEffect(() => {
     recarregar()
-  }, [])
+  }, [usuarioAlvo])
 
   async function recarregar() {
     try {
-      const p = await api.pontos.listarHoje()
+      const p = await api.pontos.listarHoje(usuarioAlvo ? Number(usuarioAlvo) : undefined)
       setEstado(p)
     } catch (e) {
       console.error('Erro ao carregar pontos:', e)
@@ -84,87 +115,121 @@ export default function PontoPage() {
         }
       />
 
-      <div className="text-center py-10 mb-8 fade-in">
-        <p className="font-mono text-[10px] uppercase tracking-widest text-ink-500 mb-3">
-          Hora atual
-        </p>
-        <p className="font-display text-8xl tracking-tightest text-ink-900 tabular-nums">
-          {agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-        </p>
-        <p className="font-mono text-xs text-ink-500 mt-2">
-          {agora.toLocaleDateString('pt-BR', {
-            weekday: 'long',
-            day: 'numeric',
-            month: 'long',
-            year: 'numeric'
-          })}
-        </p>
-      </div>
-
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10 fade-in stagger-1">
-        <BotaoPonto
-          icon={LogIn}
-          label="Entrada"
-          onClick={() => bater('entrada')}
-          disabled={!naoIniciou || carregando}
-          variant={naoIniciou ? 'primary' : 'done'}
-          hora={estado?.entrada?.timestamp}
-        />
-        <BotaoPonto
-          icon={Coffee}
-          label="Almoço"
-          onClick={() => bater('almoco_inicio')}
-          disabled={!podeAlmoco || carregando}
-          variant={tem('almoco_inicio') ? 'done' : 'normal'}
-          hora={estado?.almoco_inicio?.timestamp}
-        />
-        <BotaoPonto
-          icon={Utensils}
-          label="Volta do almoço"
-          onClick={() => bater('almoco_fim')}
-          disabled={!podeVoltar || carregando}
-          variant={tem('almoco_fim') ? 'done' : 'normal'}
-          hora={estado?.almoco_fim?.timestamp}
-        />
-        <BotaoPonto
-          icon={LogOut}
-          label="Saída"
-          onClick={() => bater('saida')}
-          disabled={!podeSair || carregando}
-          variant={tem('saida') ? 'done' : 'normal'}
-          hora={estado?.saida?.timestamp}
-        />
-      </div>
-
-      <div className="card p-6 mb-6 fade-in stagger-2">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="font-mono text-[10px] uppercase tracking-widest text-ink-500 mb-1">
-              Parada extra
+      {ehAdminOuRH && (
+        <div className="card p-5 mb-6 fade-in">
+          <label className="label flex items-center gap-1">
+            <UserIcon size={11} /> Ver/corrigir ponto de
+          </label>
+          <select
+            className="input-field max-w-xs"
+            value={usuarioAlvo}
+            onChange={(e) => setUsuarioAlvo(e.target.value ? Number(e.target.value) : '')}
+          >
+            <option value="">— Eu mesmo —</option>
+            {usuarios
+              .filter((u) => u.id !== user?.id)
+              .map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.nome}
+                </option>
+              ))}
+          </select>
+          {!souEuMesmo && (
+            <p className="text-xs text-ink-500 mt-2">
+              Você está corrigindo o ponto de outra pessoa. Só é possível editar ou registrar
+              retroativamente — o registro em tempo real é feito pelo próprio funcionário.
             </p>
-            <h3 className="font-display text-2xl text-ink-900">
-              {paradaAtiva ? 'Parada em andamento' : 'Banheiro, café, ligação...'}
-            </h3>
-          </div>
-          {paradaAtiva ? (
-            <button
-              onClick={() => bater('parada_fim')}
-              disabled={carregando}
-              className="btn-accent"
-            >
-              <Play size={14} /> Retomar trabalho
-            </button>
-          ) : (
-            <button
-              onClick={() => bater('parada_inicio')}
-              disabled={!podeIniciarParada || carregando}
-              className="btn-secondary"
-            >
-              <Pause size={14} /> Iniciar parada
-            </button>
           )}
         </div>
-      </div>
+      )}
+
+      {souEuMesmo && (
+        <div className="text-center py-10 mb-8 fade-in">
+          <p className="font-mono text-[10px] uppercase tracking-widest text-ink-500 mb-3">
+            Hora atual
+          </p>
+          <p className="font-display text-8xl tracking-tightest text-ink-900 tabular-nums">
+            {agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+          </p>
+          <p className="font-mono text-xs text-ink-500 mt-2">
+            {agora.toLocaleDateString('pt-BR', {
+              weekday: 'long',
+              day: 'numeric',
+              month: 'long',
+              year: 'numeric'
+            })}
+          </p>
+        </div>
+      )}
+
+      {souEuMesmo && (
+        <>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10 fade-in stagger-1">
+            <BotaoPonto
+              icon={LogIn}
+              label="Entrada"
+              onClick={() => bater('entrada')}
+              disabled={!naoIniciou || carregando}
+              variant={naoIniciou ? 'primary' : 'done'}
+              hora={estado?.entrada?.timestamp}
+            />
+            <BotaoPonto
+              icon={Coffee}
+              label="Almoço"
+              onClick={() => bater('almoco_inicio')}
+              disabled={!podeAlmoco || carregando}
+              variant={tem('almoco_inicio') ? 'done' : 'normal'}
+              hora={estado?.almoco_inicio?.timestamp}
+            />
+            <BotaoPonto
+              icon={Utensils}
+              label="Volta do almoço"
+              onClick={() => bater('almoco_fim')}
+              disabled={!podeVoltar || carregando}
+              variant={tem('almoco_fim') ? 'done' : 'normal'}
+              hora={estado?.almoco_fim?.timestamp}
+            />
+            <BotaoPonto
+              icon={LogOut}
+              label="Saída"
+              onClick={() => bater('saida')}
+              disabled={!podeSair || carregando}
+              variant={tem('saida') ? 'done' : 'normal'}
+              hora={estado?.saida?.timestamp}
+            />
+          </div>
+
+          <div className="card p-6 mb-6 fade-in stagger-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-mono text-[10px] uppercase tracking-widest text-ink-500 mb-1">
+                  Parada extra
+                </p>
+                <h3 className="font-display text-2xl text-ink-900">
+                  {paradaAtiva ? 'Parada em andamento' : 'Banheiro, café, ligação...'}
+                </h3>
+              </div>
+              {paradaAtiva ? (
+                <button
+                  onClick={() => bater('parada_fim')}
+                  disabled={carregando}
+                  className="btn-accent"
+                >
+                  <Play size={14} /> Retomar trabalho
+                </button>
+              ) : (
+                <button
+                  onClick={() => bater('parada_inicio')}
+                  disabled={!podeIniciarParada || carregando}
+                  className="btn-secondary"
+                >
+                  <Pause size={14} /> Iniciar parada
+                </button>
+              )}
+            </div>
+          </div>
+        </>
+      )}
 
       {erro && (
         <div className="px-4 py-3 mb-6 bg-terra-50 border border-terra-400/40 rounded-md fade-in">
@@ -180,12 +245,35 @@ export default function PontoPage() {
             </p>
             <h3 className="font-display text-2xl text-ink-900">Hoje</h3>
           </div>
-          <p className="font-mono text-3xl text-ink-900 tabular-nums">
-            {estado?.total_horas || '00h00'}
-          </p>
+          <div className="flex items-center gap-4">
+            <p className="font-mono text-3xl text-ink-900 tabular-nums">
+              {estado?.total_horas || '00h00'}
+            </p>
+            <button
+              type="button"
+              onClick={() => setModal({ modo: 'criar' })}
+              className="btn-secondary"
+              title="Registrar ponto esquecido"
+            >
+              <Plus size={14} /> Corrigir ponto
+            </button>
+          </div>
         </div>
-        <Timeline estado={estado} />
+        <Timeline estado={estado} onEditar={(p) => setModal({ modo: 'editar', ponto: p })} />
       </div>
+
+      {modal && (
+        <ModalPonto
+          modo={modal.modo}
+          ponto={modal.ponto}
+          usuarioId={usuarioAlvo ? Number(usuarioAlvo) : undefined}
+          onFechar={() => setModal(null)}
+          onSalvo={() => {
+            setModal(null)
+            recarregar()
+          }}
+        />
+      )}
     </>
   )
 }
@@ -232,7 +320,13 @@ function BotaoPonto({
   )
 }
 
-function Timeline({ estado }: { estado: PontosDoDia | null }) {
+function Timeline({
+  estado,
+  onEditar
+}: {
+  estado: PontosDoDia | null
+  onEditar: (p: Ponto) => void
+}) {
   if (!estado) return <p className="text-ink-500 text-sm">Carregando...</p>
 
   const eventos: Array<{ tipo: string; rotulo: string; ponto: Ponto }> = []
@@ -265,7 +359,7 @@ function Timeline({ estado }: { estado: PontosDoDia | null }) {
         const ehSaida = e.tipo === 'saida'
         const ehParada = e.tipo.includes('parada')
         return (
-          <div key={i} className="flex items-baseline gap-4 py-1">
+          <div key={i} className="flex items-baseline gap-4 py-1 group">
             <span
               className={`font-mono text-sm tabular-nums w-16
               ${ehSaida ? 'text-terra-500' : 'text-ink-700'}`}
@@ -277,10 +371,171 @@ function Timeline({ estado }: { estado: PontosDoDia | null }) {
             />
             <span className={`text-sm ${ehSaida ? 'font-medium text-terra-500' : 'text-ink-700'}`}>
               {e.rotulo}
+              {e.ponto.origem === 'manual' && (
+                <span className="ml-2 text-[10px] font-mono uppercase tracking-widest text-ink-400">
+                  editado
+                </span>
+              )}
             </span>
+            <button
+              type="button"
+              onClick={() => onEditar(e.ponto)}
+              className="opacity-0 group-hover:opacity-100 transition-opacity text-ink-400 hover:text-ink-900"
+              title="Editar este ponto"
+            >
+              <Pencil size={13} />
+            </button>
           </div>
         )
       })}
+    </div>
+  )
+}
+
+function ModalPonto({
+  modo,
+  ponto,
+  usuarioId,
+  onFechar,
+  onSalvo
+}: {
+  modo: 'criar' | 'editar'
+  ponto?: Ponto
+  usuarioId?: number
+  onFechar: () => void
+  onSalvo: () => void
+}) {
+  const iniciais = paraInputs(ponto?.timestamp)
+  const [tipo, setTipo] = useState<TipoPonto>(ponto?.tipo || 'entrada')
+  const [data, setData] = useState(iniciais.data)
+  const [hora, setHora] = useState(iniciais.hora)
+  const [motivo, setMotivo] = useState('')
+  const [erro, setErro] = useState('')
+  const [salvando, setSalvando] = useState(false)
+
+  async function salvar() {
+    setErro('')
+    if (!motivo.trim()) {
+      setErro('Informe o motivo da correção')
+      return
+    }
+    setSalvando(true)
+    try {
+      const timestamp = `${data} ${hora}`
+      if (modo === 'editar' && ponto) {
+        await api.pontos.corrigir(ponto.id, timestamp, motivo.trim())
+      } else {
+        await api.pontos.criarManual({ tipo, timestamp, motivo: motivo.trim(), usuario_id: usuarioId })
+      }
+      onSalvo()
+    } catch (e: any) {
+      setErro(e.message || 'Erro ao salvar')
+    } finally {
+      setSalvando(false)
+    }
+  }
+
+  async function excluir() {
+    if (!ponto) return
+    setErro('')
+    if (!motivo.trim()) {
+      setErro('Informe o motivo da exclusão')
+      return
+    }
+    setSalvando(true)
+    try {
+      await api.pontos.excluir(ponto.id, motivo.trim())
+      onSalvo()
+    } catch (e: any) {
+      setErro(e.message || 'Erro ao excluir')
+    } finally {
+      setSalvando(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-ink-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="card w-full max-w-md p-7">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="font-display text-2xl text-ink-900">
+            {modo === 'editar' ? 'Corrigir ponto' : 'Registrar ponto esquecido'}
+          </h3>
+          <button onClick={onFechar} className="text-ink-400 hover:text-ink-900">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="label">Tipo</label>
+            <select
+              className="input-field"
+              value={tipo}
+              onChange={(e) => setTipo(e.target.value as TipoPonto)}
+              disabled={modo === 'editar'}
+            >
+              {Object.entries(ROTULOS_TIPO).map(([v, l]) => (
+                <option key={v} value={v}>
+                  {l}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label className="label">Data</label>
+              <input
+                type="date"
+                className="input-field"
+                value={data}
+                onChange={(e) => setData(e.target.value)}
+              />
+            </div>
+            <div className="flex-1">
+              <label className="label">Hora</label>
+              <input
+                type="time"
+                className="input-field"
+                value={hora}
+                onChange={(e) => setHora(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="label">Motivo da correção</label>
+            <input
+              type="text"
+              className="input-field"
+              placeholder="Ex: esqueci de bater a saída"
+              value={motivo}
+              onChange={(e) => setMotivo(e.target.value)}
+              maxLength={500}
+            />
+          </div>
+
+          {erro && <p className="text-sm text-terra-700">{erro}</p>}
+
+          <div className="flex items-center justify-between pt-2">
+            {modo === 'editar' ? (
+              <button onClick={excluir} disabled={salvando} className="btn-secondary text-terra-600">
+                Excluir
+              </button>
+            ) : (
+              <span />
+            )}
+            <div className="flex gap-2">
+              <button onClick={onFechar} disabled={salvando} className="btn-secondary">
+                Cancelar
+              </button>
+              <button onClick={salvar} disabled={salvando} className="btn-primary">
+                Salvar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

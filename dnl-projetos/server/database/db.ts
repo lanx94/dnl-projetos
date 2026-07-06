@@ -114,6 +114,37 @@ function runMigrations(db: Database.Database) {
     );
     CREATE INDEX IF NOT EXISTS idx_cronometros_usuario ON cronometros(usuario_id, inicio);
 
+    CREATE TABLE IF NOT EXISTS pontos_auditoria (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      ponto_id INTEGER,
+      usuario_id INTEGER NOT NULL,
+      editado_por INTEGER NOT NULL,
+      acao TEXT NOT NULL CHECK(acao IN ('criacao_manual','edicao','exclusao')),
+      tipo TEXT,
+      valor_anterior TEXT,
+      valor_novo TEXT,
+      motivo TEXT NOT NULL,
+      criado_em TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+      FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+      FOREIGN KEY (editado_por) REFERENCES usuarios(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_pontos_auditoria_ponto ON pontos_auditoria(ponto_id);
+
+    CREATE TABLE IF NOT EXISTS cronometros_auditoria (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      cronometro_id INTEGER,
+      usuario_id INTEGER NOT NULL,
+      editado_por INTEGER NOT NULL,
+      acao TEXT NOT NULL CHECK(acao IN ('criacao_manual','edicao','exclusao')),
+      valor_anterior TEXT,
+      valor_novo TEXT,
+      motivo TEXT NOT NULL,
+      criado_em TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+      FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+      FOREIGN KEY (editado_por) REFERENCES usuarios(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_cronometros_auditoria_cron ON cronometros_auditoria(cronometro_id);
+
     CREATE TABLE IF NOT EXISTS relatorios_diarios (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       usuario_id INTEGER NOT NULL,
@@ -418,6 +449,17 @@ function migrarColunasNovas(db: Database.Database) {
   adicionar('leads', 'orcamento_id', 'INTEGER')
   adicionar('orcamentos', 'projetos_necessarios', 'TEXT')
   adicionar('orcamentos', 'incluso', 'TEXT')
+  adicionar('pontos', 'editado_por', 'INTEGER')
+  adicionar('pontos', 'editado_em', 'TEXT')
+  adicionar('pontos', 'motivo_edicao', 'TEXT')
+  adicionar('pontos', 'origem', "TEXT NOT NULL DEFAULT 'bater'")
+  adicionar('cronometros', 'editado_por', 'INTEGER')
+  adicionar('cronometros', 'editado_em', 'TEXT')
+  adicionar('cronometros', 'motivo_edicao', 'TEXT')
+  adicionar('cronometros', 'origem', "TEXT NOT NULL DEFAULT 'timer'")
+  adicionar('eventos', 'destinatarios_json', "TEXT NOT NULL DEFAULT '[]'")
+  adicionar('eventos', 'cargos_json', "TEXT NOT NULL DEFAULT '[]'")
+  adicionar('revisoes_projeto', 'projeto_id', 'INTEGER')
 }
 
 export function seedInitialData(db: Database.Database) {
@@ -588,4 +630,28 @@ function seedClausulas(db: Database.Database) {
   ins(USC, 'rescisao',               'DA RESCISÃO',                               'Rescisão contratual',             'O presente contrato poderá ser rescindido por qualquer das partes, mediante aviso prévio de 30 (trinta) dias, sem prejuízo das obrigações já assumidas.\n\nParágrafo Único – Em caso de descumprimento das cláusulas contratuais, o contrato poderá ser rescindido de imediato, cabendo indenização pelos danos causados.',                                                                                                                               0, 14)
   ins(USC, 'condicoes_gerais',       'DAS CONDIÇÕES GERAIS',                      'Condições gerais',                'Os documentos elaborados são de uso exclusivo do CONTRATANTE para os fins previstos neste contrato. O reaproveitamento para outros fins ou imóveis depende de nova contratação e emissão de nova ART.\n\nParágrafo Único – A CONTRATADA não se responsabiliza por eventual indeferimento cartorário em razão de documentação incompleta fornecida pelo CONTRATANTE.',                                                                                     0, 15)
   ins(USC, 'foro',                   'DO FORO',                                   'Foro de eleição',                 FORO_TEXTO,                                                                                                                                                                                                                                                                                                                                                                                                                                               1, 21)
+
+  // === CLÁUSULAS GERAIS (aplicadas a todos os tipos; INSERT OR IGNORE preserva as já existentes) ===
+  const TODOS_TIPOS = ['laudo_vizinhanca', 'eletrica', 'hidraulica', 'gas', 'regularizacao', 'manual_proprietario', 'generico', EHG, LENT, LAPT, MAB, USC]
+  const clausulasGerais = [
+    { id: 'atividades_nao_englobadas', secao: 'DOS SERVIÇOS', rotulo: 'Atividades e produtos não englobados', ordem: 4, texto: 'As partes estão cientes de que quaisquer outras atividades, produtos e contratações de serviços não englobam o presente contrato e, a título de exemplo, não constam no preço e nas obrigações do projeto: impostos, taxas, emolumentos, registros na Prefeitura, análises de solo, cópias heliográficas, xerox, fotografias, bem como qualquer bem destinado à execução e decoração do imóvel, pessoal necessário para execução dos serviços e eventuais encargos sociais, etc.' },
+    { id: 'fornecimento_documentos', secao: 'DAS OBRIGAÇÕES', rotulo: 'Fornecimento de dados e documentos', ordem: 5, texto: 'O CONTRATANTE deverá fornecer à CONTRATADA todos os dados, informações e documentos necessários para o bom e fiel desenvolvimento do objeto contratado, declarando por meio do presente instrumento a veracidade, comprometendo-se a não faltar com a verdade, sendo responsável pela idoneidade moral, legitimidade e veracidade dos documentos e informações que apresentar à CONTRATADA, devendo informar quaisquer alterações e manter os dados e documentos atualizados.' },
+    { id: 'acesso_imovel', secao: 'DAS OBRIGAÇÕES', rotulo: 'Acesso ao imóvel para visita técnica', ordem: 6, texto: 'O CONTRATANTE deverá fornecer à CONTRATADA, em relação à visita técnica, o acesso livre ao imóvel e às edificações que lá se encontram, no melhor dia, que será combinado e acertado entre ambos.' },
+    { id: 'fornecimento_projetos', secao: 'DAS OBRIGAÇÕES', rotulo: 'Fornecimento dos projetos arquitetônico e estrutural', ordem: 7, texto: 'O CONTRATANTE deverá fornecer à CONTRATADA o PROJETO ARQUITETÔNICO e o PROJETO ESTRUTURAL do imóvel.' },
+    { id: 'entrega_documentos', secao: 'DAS OBRIGAÇÕES', rotulo: 'Entrega dos documentos', ordem: 8, texto: 'A CONTRATADA entregará ao CONTRATANTE todos os documentos relacionados na cláusula dos serviços contratados, e estará à disposição, se houver dúvidas.' },
+    { id: 'compromisso_pagamento', secao: 'DAS OBRIGAÇÕES', rotulo: 'Compromisso de pagamento', ordem: 9, texto: 'O CONTRATANTE se compromete a efetuar o pagamento pelo valor e na forma estabelecidos neste contrato.' },
+    { id: 'prazo', secao: 'DO PRAZO', rotulo: 'Prazo de entrega', ordem: 10, texto: 'A CONTRATADA se compromete a entregar o trabalho técnico no prazo de 30 (trinta) dias úteis após o pagamento da entrada ou desde que tenha recebido todos os documentos e informações necessárias para a confecção do trabalho técnico, e não serão contados os dias em que o projeto ficar retido pelo CONTRATANTE para apreciação; caso contrário, o prazo será computado a partir da data de recebimento dos documentos.' },
+    { id: 'desistencia', secao: 'DA RESCISÃO', rotulo: 'Desistência do CONTRATANTE', ordem: 14, texto: 'Em caso de desistência por parte do CONTRATANTE, fica a CONTRATADA expressamente autorizada a reter o valor recebido referente a 50% (cinquenta por cento) do valor da assinatura deste contrato.' },
+    { id: 'desistencia_contratada', secao: 'DA RESCISÃO', rotulo: 'Desistência da CONTRATADA', ordem: 15, texto: 'Caso ocorra a desistência por parte da CONTRATADA, esta deverá proceder à devolução dos valores recebidos ao CONTRATANTE.' },
+    { id: 'alteracoes_desacordo', secao: 'DAS CONDIÇÕES GERAIS', rotulo: 'Alterações em desacordo com o projeto', ordem: 16, texto: 'A CONTRATADA não se responsabiliza por alterações ocorridas durante a obra que estiverem em desacordo com os serviços por ela entregues ou por alterações solicitadas pelo CONTRATANTE após a aprovação e entrega do projeto finalizado.' },
+    { id: 'alteracoes_projeto', secao: 'DAS CONDIÇÕES GERAIS', rotulo: 'Direito a alterações no projeto', ordem: 17, texto: 'O CONTRATANTE terá direito a solicitar 2 (duas) alterações no projeto. Caso haja necessidade de realizar mais alterações ou solicitar alterações após a aprovação e entrega final do projeto, a CONTRATADA poderá cobrar um valor adicional a ser previamente acordado com o CONTRATANTE. O valor adicional será calculado com base na complexidade e extensão das alterações solicitadas.\n\nParágrafo Único – A CONTRATADA se compromete a informar previamente o valor adicional e obter a aprovação do CONTRATANTE antes de realizar as alterações solicitadas.' },
+    { id: 'propriedade_intelectual', secao: 'DAS CONDIÇÕES GERAIS', rotulo: 'Propriedade intelectual (Lei nº 9.610/98)', ordem: 18, texto: 'Nos limites da Lei nº 9.610/98, todo e qualquer projeto, desenho, especificações, relatórios, pareceres e outros documentos elaborados pela CONTRATADA são de sua propriedade.' },
+    { id: 'cessao_proibida', secao: 'DAS CONDIÇÕES GERAIS', rotulo: 'Proibição de cessão do contrato', ordem: 19, texto: 'Fica expressamente proibido a qualquer das partes ceder ou transferir, total ou parcialmente, os direitos e obrigações decorrentes deste contrato, sob pena das sanções e responsabilidades civis, sem prejuízo da multa contratual.' },
+    { id: 'dados_pessoais', secao: 'DAS CONDIÇÕES GERAIS', rotulo: 'Coleta de dados pessoais', ordem: 19.4, texto: 'Os dados pessoais do CONTRATANTE foram coletados exclusivamente para elaboração do presente contrato de prestação de serviços, e serão armazenados somente pelo prazo vigente deste instrumento.' },
+    { id: 'lgpd', secao: 'DAS CONDIÇÕES GERAIS', rotulo: 'Proteção de dados (LGPD)', ordem: 19.7, texto: 'A CONTRATADA e seus colaboradores se comprometem a manter os dados coletados protegidos, em conformidade com a Lei Geral de Proteção de Dados Pessoais (Lei nº 13.709/2018) e as determinações de órgãos reguladores e fiscalizadores, além das demais normas e políticas de proteção de dados.' },
+    { id: 'autorizacao_imagem', secao: 'DA AUTORIZAÇÃO DE IMAGEM', rotulo: 'Autorização de uso de imagens', ordem: 20, texto: 'O CONTRATANTE declara estar ciente e autoriza o uso de imagens e vídeos da obra e/ou divulgação do projeto, de forma gratuita, pela CONTRATADA, para uso de marketing ou quaisquer outras formas de mídia em divulgações publicitárias.' }
+  ]
+  for (const tipo of TODOS_TIPOS) {
+    for (const c of clausulasGerais) ins(tipo, c.id, c.secao, c.rotulo, c.texto, 0, c.ordem)
+  }
 }

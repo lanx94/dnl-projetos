@@ -8,10 +8,26 @@ import type {
 } from '@shared/types'
 import {
   fmtMoneyBR, fmtMoney, fmtDataBR, numberToWords,
-  calcularNumeros, substituirVars, agruparPorSecao
+  calcularNumeros, substituirVars, agruparPorSecao,
+  REGEX_TERMOS_PARTES, negritarTermosHtml
 } from '../utils/contratos'
 import { maskCpfCnpj } from '../utils/masks'
-import logoDNL from '../assets/logo-dnl-new.svg'
+import logoDNL from '../assets/logo-dnl.png'
+
+const FONTE_CONTRATO = "'Arial', 'Helvetica', sans-serif"
+
+// Divide o texto e envolve CONTRATANTE/CONTRATADA/CONTRATADO em <strong>
+function negritarTermos(texto: string): React.ReactNode[] {
+  return texto.split(REGEX_TERMOS_PARTES).map((parte, i) =>
+    /^(CONTRATANTES?|CONTRATADAS?|CONTRATADOS?)$/.test(parte)
+      ? <strong key={i}>{parte}</strong>
+      : parte
+  )
+}
+
+function up(s?: string | null): string {
+  return (s || '').toUpperCase()
+}
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
@@ -324,32 +340,32 @@ function ContratoView({
 
   const grupos = agruparPorSecao(contrato.clausulas.filter(c => c.incluida))
 
-  function gerarWord() {
+  async function gerarWord() {
     const numeros = calcularNumeros(contrato.clausulas)
 
-    const contratadaText = contrato.contratada_qualificacao || buildContratadaDefault(config)
+    const contratadaText = negritarTermosHtml(contrato.contratada_qualificacao || buildContratadaDefault(config))
 
     let contratanteText = ''
     if (contrato.cliente_tipo_pessoa === 'juridica') {
-      contratanteText = contrato.cliente_nome || '—'
+      contratanteText = up(contrato.cliente_nome) || '—'
       if (contrato.cliente_cnpj) contratanteText += `, pessoa jurídica inscrita no CNPJ sob o nº ${maskCpfCnpj(contrato.cliente_cnpj)}`
-      if (contrato.cliente_endereco) contratanteText += `, com sede em ${contrato.cliente_endereco}`
+      if (contrato.cliente_endereco) contratanteText += `, com sede em ${up(contrato.cliente_endereco)}`
       if (contrato.cliente_representante) {
-        contratanteText += `, neste ato representada por ${contrato.cliente_representante}`
-        if (contrato.cliente_estado_civil) contratanteText += `, ${contrato.cliente_estado_civil}`
-        if (contrato.cliente_profissao) contratanteText += `, ${contrato.cliente_profissao}`
-        if (contrato.cliente_nacionalidade) contratanteText += `, ${contrato.cliente_nacionalidade}`
+        contratanteText += `, neste ato representada por ${up(contrato.cliente_representante)}`
+        if (contrato.cliente_estado_civil) contratanteText += `, ${up(contrato.cliente_estado_civil)}`
+        if (contrato.cliente_profissao) contratanteText += `, ${up(contrato.cliente_profissao)}`
+        if (contrato.cliente_nacionalidade) contratanteText += `, ${up(contrato.cliente_nacionalidade)}`
         if (contrato.cliente_rg) contratanteText += `, portador(a) do RG nº ${contrato.cliente_rg}`
         if (contrato.cliente_cpf) contratanteText += `, inscrito(a) no CPF sob o nº ${maskCpfCnpj(contrato.cliente_cpf)}`
       }
     } else {
-      contratanteText = contrato.cliente_nome || '—'
-      if (contrato.cliente_nacionalidade) contratanteText += `, ${contrato.cliente_nacionalidade}`
-      if (contrato.cliente_estado_civil) contratanteText += `, ${contrato.cliente_estado_civil}`
-      if (contrato.cliente_profissao) contratanteText += `, ${contrato.cliente_profissao}`
+      contratanteText = up(contrato.cliente_nome) || '—'
+      if (contrato.cliente_nacionalidade) contratanteText += `, ${up(contrato.cliente_nacionalidade)}`
+      if (contrato.cliente_estado_civil) contratanteText += `, ${up(contrato.cliente_estado_civil)}`
+      if (contrato.cliente_profissao) contratanteText += `, ${up(contrato.cliente_profissao)}`
       if (contrato.cliente_rg) contratanteText += `, portador(a) do RG nº ${contrato.cliente_rg}`
       if (contrato.cliente_cpf) contratanteText += `, inscrito(a) no CPF sob o nº ${maskCpfCnpj(contrato.cliente_cpf)}`
-      if (contrato.cliente_endereco) contratanteText += `, residente e domiciliado(a) à ${contrato.cliente_endereco}`
+      if (contrato.cliente_endereco) contratanteText += `, residente e domiciliado(a) à ${up(contrato.cliente_endereco)}`
     }
 
     let clausulasHtml = ''
@@ -357,13 +373,28 @@ function ContratoView({
       clausulasHtml += `<div style="margin-top:32px;margin-bottom:16px;text-align:center;"><span style="font-family:Arial,sans-serif;font-size:9pt;font-weight:bold;letter-spacing:3px;text-transform:uppercase;color:#888;">— ${g.secao} —</span></div>`
       for (const c of g.itens) {
         const n = numeros[c.id]
-        const texto = substituirVars(c.texto, ctx)
+        const texto = negritarTermosHtml(substituirVars(c.texto, ctx))
         const paragrafos = texto.split('\n').filter(l => l.trim())
-        clausulasHtml += `<p style="font-family:Georgia,serif;font-size:13pt;line-height:1.85;text-align:justify;margin-bottom:12px;color:#1a1a1a;"><strong>Cláusula ${n}ª.</strong> ${paragrafos[0] || ''}</p>`
+        clausulasHtml += `<p style="font-family:Arial,sans-serif;font-size:12pt;line-height:1.85;text-align:justify;margin-bottom:12px;color:#1a1a1a;"><strong>Cláusula ${n}ª.</strong> ${paragrafos[0] || ''}</p>`
         for (const p of paragrafos.slice(1)) {
-          clausulasHtml += `<p style="font-family:Georgia,serif;font-size:13pt;line-height:1.85;text-align:justify;margin-bottom:8px;color:#1a1a1a;padding-left:24px;">${p}</p>`
+          clausulasHtml += `<p style="font-family:Arial,sans-serif;font-size:12pt;line-height:1.85;text-align:justify;margin-bottom:8px;color:#1a1a1a;padding-left:24px;">${p}</p>`
         }
       }
+    }
+
+    // Logo em base64 para embutir no arquivo Word (formato MHTML)
+    let logoBase64 = ''
+    try {
+      const resp = await fetch(logoDNL)
+      const blobLogo = await resp.blob()
+      logoBase64 = await new Promise<string>((resolve, reject) => {
+        const fr = new FileReader()
+        fr.onload = () => resolve(String(fr.result).split(',')[1] || '')
+        fr.onerror = reject
+        fr.readAsDataURL(blobLogo)
+      })
+    } catch {
+      // sem logo, o cabeçalho fica só com texto
     }
 
     const rodapeInfo = [
@@ -376,10 +407,11 @@ function ContratoView({
     const html = `﻿<!DOCTYPE html>
 <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
 <head><meta charset="utf-8"><title>${contrato.numero}</title>
-<style>@page{margin:3cm 3.5cm;}body{font-family:Georgia,"Times New Roman",serif;font-size:13pt;color:#1a1a1a;}</style>
+<style>@page{margin:3cm 3.5cm;}body{font-family:Arial,Helvetica,sans-serif;font-size:12pt;color:#1a1a1a;}</style>
 </head><body>
 <table style="width:100%;border-collapse:collapse;border-bottom:2.5pt solid #1a1a1a;padding-bottom:16px;margin-bottom:24px;">
   <tr>
+    ${logoBase64 ? `<td style="vertical-align:middle;padding-bottom:12px;width:130px;"><img src="logo-dnl.png" width="120" alt="DNL Projetos"></td>` : ''}
     <td style="vertical-align:middle;padding-bottom:12px;">
       <span style="font-family:Arial,sans-serif;font-size:14pt;font-weight:bold;letter-spacing:3px;text-transform:uppercase;">${config.empresa_nome || 'DNL Projetos'}</span>
       ${config.empresa_slogan ? `<br><span style="font-family:Arial,sans-serif;font-size:9pt;color:#888;">${config.empresa_slogan}</span>` : ''}
@@ -395,23 +427,23 @@ function ContratoView({
 </table>
 <div style="text-align:center;margin-bottom:28px;">
   <h1 style="font-family:Arial,sans-serif;font-size:13pt;font-weight:bold;letter-spacing:4px;text-transform:uppercase;color:#1a1a1a;margin:0;">Contrato de Prestação de Serviços</h1>
-  <p style="font-family:Georgia,serif;font-size:11pt;color:#999;margin:6px 0 0;font-style:italic;">${tiposLabel(tipos)}</p>
+  <p style="font-family:Arial,sans-serif;font-size:11pt;color:#999;margin:6px 0 0;font-style:italic;">${tiposLabel(tipos)}</p>
 </div>
-<div style="margin-bottom:28px;font-size:13pt;line-height:1.8;text-align:justify;color:#1a1a1a;">
+<div style="margin-bottom:28px;font-size:12pt;line-height:1.8;text-align:justify;color:#1a1a1a;">
   <p style="margin-bottom:14px;">Pelo presente instrumento particular, as partes a seguir identificadas:</p>
   <p style="margin-bottom:14px;"><strong>CONTRATADA:</strong> ${contratadaText}, doravante denominada simplesmente <strong>CONTRATADA</strong>.</p>
   <p style="margin-bottom:14px;"><strong>CONTRATANTE:</strong> ${contratanteText}, doravante denominado(a) simplesmente <strong>CONTRATANTE</strong>.</p>
   <p style="font-style:italic;color:#555;">Celebram, entre si, o presente Contrato de Prestação de Serviços, que se regerá pelas cláusulas e condições a seguir estipuladas, bem como pelas disposições do Código Civil Brasileiro (Lei nº 10.406/2002), no que couber.</p>
 </div>
 ${clausulasHtml}
-<p style="text-align:center;font-style:italic;color:#555;margin-top:40px;margin-bottom:28px;font-size:13pt;">${contrato.cidade}, ${contrato.data_assinatura ? fmtDataBR(contrato.data_assinatura) : '___ de ___________________ de ______'}.</p>
+<p style="text-align:center;font-style:italic;color:#555;margin-top:40px;margin-bottom:28px;font-size:12pt;">${contrato.cidade}, ${contrato.data_assinatura ? fmtDataBR(contrato.data_assinatura) : '___ de ___________________ de ______'}.</p>
 <table style="width:100%;border-collapse:collapse;margin-top:8px;">
   <tr>
     <td style="width:50%;text-align:center;padding:0 40px;">
       <div style="height:80px;"></div>
       <div style="border-top:2pt solid #1a1a1a;padding-top:10px;">
         <p style="font-family:Arial,sans-serif;font-size:10pt;font-weight:bold;text-transform:uppercase;letter-spacing:2px;margin:0;">CONTRATANTE</p>
-        <p style="font-family:Arial,sans-serif;font-size:9pt;color:#666;margin:4px 0 0;">${contrato.cliente_nome}</p>
+        <p style="font-family:Arial,sans-serif;font-size:9pt;color:#666;margin:4px 0 0;">${up(contrato.cliente_nome)}</p>
       </div>
     </td>
     <td style="width:50%;text-align:center;padding:0 40px;">
@@ -447,7 +479,36 @@ ${contrato.observacoes ? `<div style="margin-top:32px;padding-top:16px;border-to
 </div>
 </body></html>`
 
-    const blob = new Blob([html], { type: 'application/vnd.ms-word;charset=utf-8' })
+    // MHTML: HTML + logo em partes MIME — formato que o Word abre com a imagem embutida
+    const b64utf8 = (s: string) => btoa(unescape(encodeURIComponent(s)))
+    const quebrar76 = (s: string) => s.replace(/(.{76})/g, '$1\r\n')
+    let conteudo: string
+    if (logoBase64) {
+      const boundary = '----=_NextPart_DNL_CONTRATO'
+      conteudo = [
+        'MIME-Version: 1.0',
+        `Content-Type: multipart/related; boundary="${boundary}"; type="text/html"`,
+        '',
+        `--${boundary}`,
+        'Content-Type: text/html; charset="utf-8"',
+        'Content-Transfer-Encoding: base64',
+        'Content-Location: contrato.html',
+        '',
+        quebrar76(b64utf8(html)),
+        `--${boundary}`,
+        'Content-Type: image/png',
+        'Content-Transfer-Encoding: base64',
+        'Content-Location: logo-dnl.png',
+        '',
+        quebrar76(logoBase64),
+        `--${boundary}--`,
+        ''
+      ].join('\r\n')
+    } else {
+      conteudo = html
+    }
+
+    const blob = new Blob([conteudo], { type: 'application/vnd.ms-word;charset=utf-8' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
@@ -485,7 +546,7 @@ ${contrato.observacoes ? `<div style="margin-top:32px;padding-top:16px;border-to
       {/* Papel do contrato */}
       <div
         className="bg-white p-14 rounded-lg shadow-soft print:shadow-none print:p-0 max-w-3xl mx-auto print-area"
-        style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}
+        style={{ fontFamily: FONTE_CONTRATO }}
       >
         {/* CABEÇALHO */}
         <div className="flex items-start justify-between gap-6 pb-5 mb-7 border-b-2 border-ink-900">
@@ -538,7 +599,7 @@ ${contrato.observacoes ? `<div style="margin-top:32px;padding-top:16px;border-to
 
           <p className="mb-5">
             <strong className="text-ink-900">CONTRATADA:</strong>{' '}
-            {contrato.contratada_qualificacao || buildContratadaDefault(config)},
+            {negritarTermos(contrato.contratada_qualificacao || buildContratadaDefault(config))},
             doravante denominada simplesmente <strong>CONTRATADA</strong>.
           </p>
 
@@ -546,18 +607,18 @@ ${contrato.observacoes ? `<div style="margin-top:32px;padding-top:16px;border-to
             <strong className="text-ink-900">CONTRATANTE:</strong>{' '}
             {contrato.cliente_tipo_pessoa === 'juridica' ? (
               <>
-                <strong>{contrato.cliente_nome || '—'}</strong>
+                <strong>{up(contrato.cliente_nome) || '—'}</strong>
                 {contrato.cliente_cnpj && (
                   <>, pessoa jurídica inscrita no CNPJ sob o nº{' '}
                   <strong>{maskCpfCnpj(contrato.cliente_cnpj)}</strong></>
                 )}
-                {contrato.cliente_endereco && <>, com sede em {contrato.cliente_endereco}</>}
+                {contrato.cliente_endereco && <>, com sede em {up(contrato.cliente_endereco)}</>}
                 {contrato.cliente_representante && (
                   <>, neste ato representada por{' '}
-                  <strong>{contrato.cliente_representante}</strong>
-                  {contrato.cliente_estado_civil && <>, {contrato.cliente_estado_civil}</>}
-                  {contrato.cliente_profissao && <>, {contrato.cliente_profissao}</>}
-                  {contrato.cliente_nacionalidade && <>, {contrato.cliente_nacionalidade}</>}
+                  <strong>{up(contrato.cliente_representante)}</strong>
+                  {contrato.cliente_estado_civil && <>, {up(contrato.cliente_estado_civil)}</>}
+                  {contrato.cliente_profissao && <>, {up(contrato.cliente_profissao)}</>}
+                  {contrato.cliente_nacionalidade && <>, {up(contrato.cliente_nacionalidade)}</>}
                   {contrato.cliente_rg && <>, portador(a) do RG nº {contrato.cliente_rg}</>}
                   {contrato.cliente_cpf && <>, inscrito(a) no CPF sob o nº <strong>{maskCpfCnpj(contrato.cliente_cpf)}</strong></>}
                   </>
@@ -565,13 +626,13 @@ ${contrato.observacoes ? `<div style="margin-top:32px;padding-top:16px;border-to
               </>
             ) : (
               <>
-                <strong>{contrato.cliente_nome || '—'}</strong>
-                {contrato.cliente_nacionalidade && <>, {contrato.cliente_nacionalidade}</>}
-                {contrato.cliente_estado_civil && <>, {contrato.cliente_estado_civil}</>}
-                {contrato.cliente_profissao && <>, {contrato.cliente_profissao}</>}
+                <strong>{up(contrato.cliente_nome) || '—'}</strong>
+                {contrato.cliente_nacionalidade && <>, {up(contrato.cliente_nacionalidade)}</>}
+                {contrato.cliente_estado_civil && <>, {up(contrato.cliente_estado_civil)}</>}
+                {contrato.cliente_profissao && <>, {up(contrato.cliente_profissao)}</>}
                 {contrato.cliente_rg && <>, portador(a) do RG nº {contrato.cliente_rg}</>}
                 {contrato.cliente_cpf && <>, inscrito(a) no CPF sob o nº <strong>{maskCpfCnpj(contrato.cliente_cpf)}</strong></>}
-                {contrato.cliente_endereco && <>, residente e domiciliado(a) à {contrato.cliente_endereco}</>}
+                {contrato.cliente_endereco && <>, residente e domiciliado(a) à {up(contrato.cliente_endereco)}</>}
               </>
             )}
             , doravante denominado(a) simplesmente <strong>CONTRATANTE</strong>.
@@ -605,11 +666,11 @@ ${contrato.observacoes ? `<div style="margin-top:32px;padding-top:16px;border-to
                 <div key={c.id} className="mb-4">
                   <p className="text-[13px] text-justify leading-[1.85] text-ink-800">
                     <strong className="text-ink-900 font-semibold">Cláusula {n}ª.</strong>{' '}
-                    {paragrafos[0]}
+                    {negritarTermos(paragrafos[0])}
                   </p>
                   {paragrafos.slice(1).map((p, i) => (
                     <p key={i} className="text-[13px] text-justify leading-[1.85] text-ink-800 mt-1.5 pl-5 whitespace-pre-line">
-                      {p}
+                      {negritarTermos(p)}
                     </p>
                   ))}
                 </div>
@@ -631,7 +692,7 @@ ${contrato.observacoes ? `<div style="margin-top:32px;padding-top:16px;border-to
         {/* ASSINATURAS */}
         <div className="grid grid-cols-2 gap-16 mt-2">
           {[
-            { rotulo: 'CONTRATANTE', nome: contrato.cliente_nome },
+            { rotulo: 'CONTRATANTE', nome: up(contrato.cliente_nome) },
             { rotulo: 'CONTRATADA', nome: config.empresa_responsavel || config.empresa_nome || 'DNL Projetos' },
           ].map(s => (
             <div key={s.rotulo} className="text-center">
@@ -822,6 +883,32 @@ function ModalContrato({
   }
   function restaurarClausula(id: string) {
     setClausulas(cls => cls.map(c => c.id === id ? { ...c, texto: c.texto_padrao } : c))
+  }
+  function adicionarClausulaEmBranco() {
+    setClausulas(cls => {
+      const foro = cls.find(c => c.id === 'foro' && c.incluida)
+      const maxOrdem = cls.length > 0 ? Math.max(...cls.map(c => c.ordem)) : 0
+      const qtdCustom = cls.filter(c => c.id.startsWith('custom_')).length
+      // Insere antes do foro (quando existir) para a cláusula não cair depois de "DO FORO"
+      const ordem = foro ? foro.ordem - 0.5 + qtdCustom * 0.01 : maxOrdem + 1 + qtdCustom
+      const nova: ClausulaContrato = {
+        id: `custom_${Date.now()}`,
+        secao: 'DAS CONDIÇÕES GERAIS',
+        rotulo: 'Nova cláusula',
+        texto: '',
+        texto_padrao: '',
+        essencial: false,
+        incluida: true,
+        ordem,
+      }
+      return [...cls, nova]
+    })
+  }
+  function removerClausula(id: string) {
+    setClausulas(cls => cls.filter(c => c.id !== id))
+  }
+  function editarMetaClausula(id: string, campo: 'rotulo' | 'secao', valor: string) {
+    setClausulas(cls => cls.map(c => c.id === id ? { ...c, [campo]: valor } : c))
   }
 
   // ── Handlers de serviços ──────────────────────────────────────────────────
@@ -1288,18 +1375,27 @@ function ModalContrato({
           {/* ── ABA: CLÁUSULAS ── */}
           {aba === 'clausulas' && (
             <div className="p-7 space-y-3">
-              <div className="bg-cream-200/50 p-3 rounded-md text-xs text-ink-700 leading-relaxed">
-                Ative ou desative cláusulas. Edite o texto livremente. Use{' '}
-                <code className="bg-cream-50 px-1 font-mono rounded text-[10px]">{'{{ref:id}}'}</code>{' '}
-                para referenciar outra cláusula pelo número (ex:{' '}
-                <code className="font-mono text-[10px]">{'{{ref:preco}}'}</code> → "Cláusula 8ª").
+              <div className="flex items-start justify-between gap-3">
+                <div className="bg-cream-200/50 p-3 rounded-md text-xs text-ink-700 leading-relaxed flex-1">
+                  Ative ou desative cláusulas. Edite o texto livremente. Use{' '}
+                  <code className="bg-cream-50 px-1 font-mono rounded text-[10px]">{'{{ref:id}}'}</code>{' '}
+                  para referenciar outra cláusula pelo número (ex:{' '}
+                  <code className="font-mono text-[10px]">{'{{ref:preco}}'}</code> → "Cláusula 8ª").
+                </div>
+                <button
+                  type="button"
+                  onClick={adicionarClausulaEmBranco}
+                  className="btn-secondary shrink-0"
+                >
+                  <Plus size={13} /> Nova cláusula em branco
+                </button>
               </div>
               {clausulas.length === 0 ? (
                 <p className="text-sm text-ink-400 italic py-4 text-center">
                   Selecione pelo menos um tipo de serviço para carregar as cláusulas.
                 </p>
               ) : (
-                clausulas.map(c => (
+                [...clausulas].sort((a, b) => a.ordem - b.ordem).map(c => (
                   <ClausulaEditor
                     key={c.id}
                     clausula={c}
@@ -1307,6 +1403,8 @@ function ModalContrato({
                     onToggle={() => toggleClausula(c.id)}
                     onEditar={txt => editarTextoClausula(c.id, txt)}
                     onRestaurar={() => restaurarClausula(c.id)}
+                    onRemover={c.id.startsWith('custom_') ? () => removerClausula(c.id) : undefined}
+                    onEditarMeta={c.id.startsWith('custom_') ? (campo, valor) => editarMetaClausula(c.id, campo, valor) : undefined}
                   />
                 ))
               )}
@@ -1318,7 +1416,7 @@ function ModalContrato({
             <div className="p-7">
               <div
                 className="bg-white rounded-md shadow-soft p-10 max-w-2xl mx-auto"
-                style={{ fontFamily: "'Georgia', serif" }}
+                style={{ fontFamily: FONTE_CONTRATO }}
               >
                 {/* Mini cabeçalho */}
                 <div className="flex items-center justify-between pb-4 mb-5 border-b-2 border-ink-900">
@@ -1340,12 +1438,12 @@ function ModalContrato({
                 </div>
 
                 <p className="text-[12px] mb-3 text-justify leading-relaxed text-ink-800">
-                  <strong>CONTRATADA:</strong> {contratadaQualificacao || buildContratadaDefault(config)}.
+                  <strong>CONTRATADA:</strong> {negritarTermos(contratadaQualificacao || buildContratadaDefault(config))}.
                 </p>
                 <p className="text-[12px] mb-6 text-justify leading-relaxed text-ink-800">
                   <strong>CONTRATANTE:</strong>{' '}
-                  <strong>{clienteSel?.nome || '(cliente não selecionado)'}</strong>
-                  {clienteSel?.representante_nome && <>, rep. por {clienteSel.representante_nome}</>}.
+                  <strong>{up(clienteSel?.nome) || '(cliente não selecionado)'}</strong>
+                  {clienteSel?.representante_nome && <>, rep. por {up(clienteSel.representante_nome)}</>}.
                 </p>
 
                 {agruparPorSecao(clausulas.filter(c => c.incluida)).map(g => (
@@ -1359,7 +1457,7 @@ function ModalContrato({
                       const n = ctx.numeros[c.id]
                       return (
                         <p key={c.id} className="text-[12px] text-justify mb-2.5 leading-relaxed text-ink-800 whitespace-pre-line">
-                          <strong>Cláusula {n}ª.</strong> {substituirVars(c.texto, ctx)}
+                          <strong>Cláusula {n}ª.</strong> {negritarTermos(substituirVars(c.texto, ctx))}
                         </p>
                       )
                     })}
@@ -1405,16 +1503,19 @@ function ModalContrato({
 // ─── Editor de cláusula individual ───────────────────────────────────────────
 
 function ClausulaEditor({
-  clausula, numero, onToggle, onEditar, onRestaurar,
+  clausula, numero, onToggle, onEditar, onRestaurar, onRemover, onEditarMeta,
 }: {
   clausula: ClausulaContrato
   numero?: number
   onToggle: () => void
   onEditar: (texto: string) => void
   onRestaurar: () => void
+  onRemover?: () => void
+  onEditarMeta?: (campo: 'rotulo' | 'secao', valor: string) => void
 }) {
-  const [editando, setEditando] = useState(false)
-  const foiAlterada = clausula.texto !== clausula.texto_padrao
+  const ehCustom = !!onEditarMeta
+  const [editando, setEditando] = useState(ehCustom && !clausula.texto)
+  const foiAlterada = !ehCustom && clausula.texto !== clausula.texto_padrao
 
   return (
     <div className={`border rounded-md transition-colors ${
@@ -1438,6 +1539,9 @@ function ClausulaEditor({
               {clausula.essencial && (
                 <span className="font-mono text-[10px] text-terra-600 bg-terra-100 px-1.5 py-0.5 rounded">essencial</span>
               )}
+              {ehCustom && (
+                <span className="font-mono text-[10px] text-terra-600 bg-terra-50 px-1.5 py-0.5 rounded">personalizada</span>
+              )}
               <span className="text-[10px] text-ink-400 italic">{clausula.secao}</span>
               {foiAlterada && (
                 <span className="font-mono text-[10px] text-moss-600">editada</span>
@@ -1454,6 +1558,16 @@ function ClausulaEditor({
                   <RotateCcw size={10} /> restaurar
                 </button>
               )}
+              {onRemover && (
+                <button
+                  type="button"
+                  onClick={onRemover}
+                  className="text-[10px] text-terra-500 hover:text-terra-700 flex items-center gap-1"
+                  title="Remover cláusula personalizada"
+                >
+                  <Trash2 size={10} /> remover
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setEditando(e => !e)}
@@ -1463,15 +1577,42 @@ function ClausulaEditor({
               </button>
             </div>
           </div>
-          <p className="text-sm font-medium text-ink-900 mt-1">{clausula.rotulo}</p>
+          {!(ehCustom && editando) && (
+            <p className="text-sm font-medium text-ink-900 mt-1">{clausula.rotulo}</p>
+          )}
+          {ehCustom && editando && onEditarMeta && (
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              <div>
+                <label className="label">Rótulo (uso interno)</label>
+                <input
+                  className="input-field text-sm"
+                  value={clausula.rotulo}
+                  onChange={e => onEditarMeta('rotulo', e.target.value)}
+                  placeholder="Ex: Garantia adicional"
+                />
+              </div>
+              <div>
+                <label className="label">Seção do contrato</label>
+                <input
+                  className="input-field text-sm"
+                  value={clausula.secao}
+                  onChange={e => onEditarMeta('secao', e.target.value)}
+                  placeholder="Ex: DAS CONDIÇÕES GERAIS"
+                />
+              </div>
+            </div>
+          )}
           {!editando && (
-            <p className="text-xs text-ink-500 mt-1 line-clamp-2">{clausula.texto}</p>
+            <p className="text-xs text-ink-500 mt-1 line-clamp-2">
+              {clausula.texto || <span className="italic text-ink-400">(sem texto — clique em editar)</span>}
+            </p>
           )}
           {editando && (
             <textarea
               className="input-field font-mono text-xs mt-2 min-h-[120px]"
               value={clausula.texto}
               onChange={e => onEditar(e.target.value)}
+              placeholder="Escreva o texto da cláusula..."
               rows={6}
             />
           )}

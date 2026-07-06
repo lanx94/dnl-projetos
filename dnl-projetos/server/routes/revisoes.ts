@@ -4,9 +4,14 @@ import type { RevisaoProjeto, RevisaoCreateInput } from '../../shared/types'
 
 const router = Router()
 
+// COALESCE: revisões vinculadas usam o nome atual do projeto cadastrado;
+// registros antigos (sem vínculo) mantêm o texto digitado na época.
 const SELECT = `
-  SELECT r.*, u.nome as responsavel_nome, uc.nome as criado_por_nome
+  SELECT r.*, COALESCE(p.nome, r.nome_projeto) as nome_projeto, c.nome as cliente_nome,
+         u.nome as responsavel_nome, uc.nome as criado_por_nome
   FROM revisoes_projeto r
+  LEFT JOIN projetos p ON p.id = r.projeto_id
+  LEFT JOIN clientes c ON c.id = p.cliente_id
   LEFT JOIN usuarios u ON u.id = r.responsavel_id
   LEFT JOIN usuarios uc ON uc.id = r.criado_por_id`
 
@@ -15,9 +20,9 @@ router.get('/', (req, res) => {
   try {
     const { nome_projeto } = req.query as { nome_projeto?: string }
     const db = getDatabase()
-    const where = nome_projeto ? 'WHERE r.nome_projeto LIKE ?' : ''
+    const where = nome_projeto ? 'WHERE COALESCE(p.nome, r.nome_projeto) LIKE ?' : ''
     const params = nome_projeto ? [`%${nome_projeto}%`] : []
-    const lista = db.prepare(`${SELECT} ${where} ORDER BY r.nome_projeto ASC, r.revisao ASC`).all(...params) as RevisaoProjeto[]
+    const lista = db.prepare(`${SELECT} ${where} ORDER BY nome_projeto ASC, r.revisao ASC`).all(...params) as RevisaoProjeto[]
     res.json(lista)
   } catch (err: any) {
     res.status(500).json({ error: err.message })
@@ -39,16 +44,33 @@ router.post('/', (req, res) => {
   try {
     const u = req.currentUser
     const input: RevisaoCreateInput = req.body
-    if (!input.nome_projeto || !input.revisao) {
-      res.status(400).json({ error: 'nome_projeto e revisao são obrigatórios' })
+    if (!input.revisao) {
+      res.status(400).json({ error: 'revisao é obrigatória' })
       return
     }
     const db = getDatabase()
+
+    let projetoId: number | null = null
+    let nomeProjeto = (input.nome_projeto || '').trim()
+    if (input.projeto_id) {
+      const proj = db.prepare('SELECT id, nome FROM projetos WHERE id = ?').get(Number(input.projeto_id)) as { id: number; nome: string } | undefined
+      if (!proj) {
+        res.status(400).json({ error: 'Projeto não encontrado' })
+        return
+      }
+      projetoId = proj.id
+      nomeProjeto = proj.nome
+    }
+    if (!projetoId && !nomeProjeto) {
+      res.status(400).json({ error: 'Selecione o projeto' })
+      return
+    }
+
     const r = db.prepare(
-      `INSERT INTO revisoes_projeto (nome_projeto, revisao, descricao, data_revisao, responsavel_id, status, criado_por_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`
-    ).run(input.nome_projeto, input.revisao, input.descricao || null, input.data_revisao || null, input.responsavel_id || null, input.status ?? 'pendente', u.id)
-    res.json(getDatabase().prepare(`${SELECT} WHERE r.id = ?`).get(r.lastInsertRowid) as RevisaoProjeto)
+      `INSERT INTO revisoes_projeto (projeto_id, nome_projeto, revisao, descricao, data_revisao, responsavel_id, status, criado_por_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(projetoId, nomeProjeto, input.revisao, input.descricao || null, input.data_revisao || null, input.responsavel_id || null, input.status ?? 'pendente', u.id)
+    res.json(db.prepare(`${SELECT} WHERE r.id = ?`).get(r.lastInsertRowid) as RevisaoProjeto)
   } catch (err: any) {
     res.status(500).json({ error: err.message })
   }
@@ -60,9 +82,20 @@ router.put('/:id', (req, res) => {
     const id = Number(req.params.id)
     const input: Partial<RevisaoCreateInput> = req.body
     const db = getDatabase()
+
+    // Vincular/trocar o projeto: valida e sincroniza o nome
+    if (input.projeto_id) {
+      const proj = db.prepare('SELECT id, nome FROM projetos WHERE id = ?').get(Number(input.projeto_id)) as { id: number; nome: string } | undefined
+      if (!proj) {
+        res.status(400).json({ error: 'Projeto não encontrado' })
+        return
+      }
+      input.nome_projeto = proj.nome
+    }
+
     const campos: string[] = []
     const valores: any[] = []
-    const permitidos = new Set(['nome_projeto', 'revisao', 'descricao', 'data_revisao', 'responsavel_id', 'status'])
+    const permitidos = new Set(['projeto_id', 'nome_projeto', 'revisao', 'descricao', 'data_revisao', 'responsavel_id', 'status'])
     for (const [k, v] of Object.entries(input)) {
       if (!permitidos.has(k)) continue
       campos.push(`${k} = ?`)
