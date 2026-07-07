@@ -381,7 +381,8 @@ function ContratoView({
         const n = numeros[c.id]
         const texto = negritarTermosHtml(substituirVars(c.texto, ctx))
         const paragrafos = texto.split('\n').filter(l => l.trim())
-        clausulasHtml += `<p style="font-family:Arial,sans-serif;font-size:12pt;line-height:1.85;text-align:justify;margin-bottom:12px;color:#1a1a1a;"><strong>Cláusula ${n}ª.</strong> ${paragrafos[0] || ''}</p>`
+        const titulo = c.id.startsWith('custom_') && c.rotulo ? `${c.rotulo}. ` : ''
+        clausulasHtml += `<p style="font-family:Arial,sans-serif;font-size:12pt;line-height:1.85;text-align:justify;margin-bottom:12px;color:#1a1a1a;"><strong>Cláusula ${n}ª.</strong> ${titulo}${paragrafos[0] || ''}</p>`
         for (const p of paragrafos.slice(1)) {
           clausulasHtml += `<p style="font-family:Arial,sans-serif;font-size:12pt;line-height:1.85;text-align:justify;margin-bottom:8px;color:#1a1a1a;padding-left:24px;">${p}</p>`
         }
@@ -662,10 +663,12 @@ ${contrato.observacoes ? `<div style="margin-top:32px;padding-top:16px;border-to
               const n = ctx.numeros[c.id]
               const texto = substituirVars(c.texto, ctx)
               const paragrafos = texto.split('\n').filter(l => l.trim())
+              const titulo = c.id.startsWith('custom_') && c.rotulo ? `${c.rotulo}. ` : ''
               return (
                 <div key={c.id} className="mb-4">
                   <p className="text-[13px] text-justify leading-[1.85] text-ink-800">
                     <strong className="text-ink-900 font-semibold">Cláusula {n}ª.</strong>{' '}
+                    {titulo}
                     {negritarTermos(paragrafos[0])}
                   </p>
                   {paragrafos.slice(1).map((p, i) => (
@@ -880,16 +883,7 @@ function ModalContrato({
     setClausulas(cls => cls.map(c => c.id === id ? { ...c, incluida: !c.incluida } : c))
   }
   function editarTextoClausula(id: string, texto: string) {
-    setClausulas(cls => cls.map(c => {
-      if (c.id !== id) return c
-      // Cláusulas personalizadas não têm rótulo próprio digitado pelo usuário —
-      // o "rótulo" (uso interno, só aparece na listagem de edição) é derivado
-      // da primeira linha do texto real, que é o que de fato entra no contrato.
-      const rotulo = c.id.startsWith('custom_')
-        ? (texto.split('\n')[0].trim().slice(0, 60) || 'Nova cláusula')
-        : c.rotulo
-      return { ...c, texto, rotulo }
-    }))
+    setClausulas(cls => cls.map(c => c.id === id ? { ...c, texto } : c))
   }
   function restaurarClausula(id: string) {
     setClausulas(cls => cls.map(c => c.id === id ? { ...c, texto: c.texto_padrao } : c))
@@ -904,7 +898,7 @@ function ModalContrato({
       const nova: ClausulaContrato = {
         id: `custom_${Date.now()}`,
         secao: 'DAS CONDIÇÕES GERAIS',
-        rotulo: 'Nova cláusula',
+        rotulo: '',
         texto: '',
         texto_padrao: '',
         essencial: false,
@@ -1489,9 +1483,11 @@ function ModalContrato({
                     </div>
                     {g.itens.map(c => {
                       const n = ctx.numeros[c.id]
+                      const titulo = c.id.startsWith('custom_') && c.rotulo ? `${c.rotulo}. ` : ''
                       return (
                         <p key={c.id} className="text-[12px] text-justify mb-2.5 leading-relaxed text-ink-800 whitespace-pre-line">
-                          <strong>Cláusula {n}ª.</strong> {negritarTermos(substituirVars(c.texto, ctx))}
+                          <strong>Cláusula {n}ª.</strong> {titulo}
+                          {negritarTermos(substituirVars(c.texto, ctx))}
                         </p>
                       )
                     })}
@@ -1632,10 +1628,21 @@ function ClausulaEditor({
             </div>
           </div>
           {!(ehCustom && editando) && (
-            <p className="text-sm font-medium text-ink-900 mt-1">{clausula.rotulo}</p>
+            <p className="text-sm font-medium text-ink-900 mt-1">
+              {clausula.rotulo || (ehCustom && <span className="italic text-ink-400 font-normal">(sem título)</span>)}
+            </p>
           )}
           {ehCustom && editando && onEditarMeta && (
-            <div className="mt-2">
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              <div>
+                <label className="label">Título (aparece no contrato, após o número)</label>
+                <input
+                  className="input-field text-sm"
+                  value={clausula.rotulo}
+                  onChange={e => onEditarMeta('rotulo', e.target.value)}
+                  placeholder="Ex: Limitações do escopo"
+                />
+              </div>
               <div>
                 <label className="label">Seção do contrato</label>
                 {novaSecao || !secoesExistentes.includes(clausula.secao) ? (
@@ -1674,8 +1681,9 @@ function ClausulaEditor({
             <>
               {ehCustom && (
                 <p className="text-[11px] text-ink-400 mt-2 mb-1">
-                  Escreva o texto exatamente como deve aparecer no contrato, incluindo a frase de
-                  abertura (ex: "Está incluso no presente contrato:").
+                  O título entra na mesma linha do número da cláusula (ex: "Cláusula 3ª. Limitações
+                  do escopo. ..."). Escreva abaixo o restante do texto — cada linha vira um item
+                  indentado.
                 </p>
               )}
               <textarea
