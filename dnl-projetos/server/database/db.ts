@@ -654,4 +654,10 @@ function seedClausulas(db: Database.Database) {
   for (const tipo of TODOS_TIPOS) {
     for (const c of clausulasGerais) ins(tipo, c.id, c.secao, c.rotulo, c.texto, 0, c.ordem)
   }
+
+  // === LIMITAÇÕES DA AVALIAÇÃO (padrão em todo laudo — vizinhança, entrega e apontamento) ===
+  const LIMITACOES_TEXTO = 'Limitações da avaliação:\n• O laudo é de caráter visual e não destrutivo;\n• Não estão inclusos ensaios laboratoriais, sondagens ou abertura de paredes;\n• O laudo não substitui projeto de recuperação estrutural;\n• A vistoria limita-se às áreas acessíveis e visíveis no momento da inspeção;\n• Não está incluso acompanhamento das obras de reparo.'
+  for (const tipo of ['laudo_vizinhanca', LENT]) {
+    ins(tipo, 'limitacoes', 'DOS SERVIÇOS', 'Limitações da avaliação', LIMITACOES_TEXTO, 0, 3.5)
+  }
 }
